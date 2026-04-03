@@ -6,6 +6,9 @@ import NavBar from './components/NavBar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
 import About from './pages/About';
+import ContactUs from './pages/ContactUs';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsAndConditions from './pages/TermsAndConditions';
 import MovieDetailsPage from './pages/MovieDetailsPage';
 import MyUploadsPage from './pages/MyUploadsPage';
 import ProfilePage from './pages/ProfilePage';
@@ -16,15 +19,6 @@ const Services: React.FC = () => (
     <div className="text-center">
       <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Services</h1>
       <p className="text-gray-600 dark:text-gray-300">Services page coming soon!</p>
-    </div>
-  </div>
-);
-
-const Contact: React.FC = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="text-center">
-      <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Contact</h1>
-      <p className="text-gray-600 dark:text-gray-300">Contact page coming soon!</p>
     </div>
   </div>
 );
@@ -58,9 +52,9 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/services" element={<Services />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/privacy-policy" element={<Services />} />
-                <Route path="/terms-and-conditions" element={<Services />} />
+                <Route path="/contact" element={<ContactUs />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
                 <Route path="/movies" element={<Home />} />
                 <Route path="/movies/:id" element={<MovieDetailsPage />} />
                 <Route path="/theatres" element={<Services />} />
