@@ -6,7 +6,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { User } from '../types/auth';
+import { apiClient } from '../services/api';
+import type { AuthLoginResponse, User } from '../types/auth';
 
 interface AuthContextValue {
   isAuthenticated: boolean;
@@ -24,10 +25,11 @@ interface AuthProviderWrapperProps {
   children: ReactNode;
 }
 
-const STORAGE_KEY = 'titlesnap.google.user';
-const TOKEN_KEY = 'titlesnap.google.access_token';
+const STORAGE_KEY = 'titlesnap.auth.user';
+const TOKEN_KEY = 'titlesnap.auth.token';
 const STATE_KEY = 'titlesnap.google.oauth_state';
 const RETURN_TO_KEY = 'titlesnap.google.return_to';
+const NONCE_KEY = 'titlesnap.google.oauth_nonce';
 
 const defaultContext: AuthContextValue = {
   isAuthenticated: false,
@@ -43,31 +45,24 @@ const defaultContext: AuthContextValue = {
 
 export const AuthContext = createContext<AuthContextValue>(defaultContext);
 
-const buildGoogleAuthUrl = (clientId: string, redirectUri: string, state: string) => {
+const buildGoogleAuthUrl = (
+  clientId: string,
+  redirectUri: string,
+  state: string,
+  nonce: string
+) => {
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
 
   url.searchParams.set('client_id', clientId);
   url.searchParams.set('redirect_uri', redirectUri);
-  url.searchParams.set('response_type', 'token');
+  url.searchParams.set('response_type', 'id_token');
   url.searchParams.set('scope', 'openid profile email');
-  url.searchParams.set('include_granted_scopes', 'true');
   url.searchParams.set('prompt', 'select_account');
   url.searchParams.set('state', state);
+  url.searchParams.set('nonce', nonce);
 
   return url.toString();
 };
-
-const normalizeGoogleUser = (profile: Record<string, unknown>): User => ({
-  sub: typeof profile.sub === 'string' ? profile.sub : undefined,
-  email: typeof profile.email === 'string' ? profile.email : undefined,
-  email_verified:
-    typeof profile.email_verified === 'boolean' ? profile.email_verified : undefined,
-  name: typeof profile.name === 'string' ? profile.name : undefined,
-  given_name: typeof profile.given_name === 'string' ? profile.given_name : undefined,
-  family_name: typeof profile.family_name === 'string' ? profile.family_name : undefined,
-  picture: typeof profile.picture === 'string' ? profile.picture : undefined,
-  locale: typeof profile.locale === 'string' ? profile.locale : undefined,
-});
 
 /**
  * Google Auth Provider Wrapper
@@ -95,21 +90,24 @@ const AuthProviderWrapper = ({ children }: AuthProviderWrapperProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | undefined>(undefined);
 
-  const persistUser = useCallback((nextUser?: User, accessToken?: string) => {
+  const clearSession = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    setUser(undefined);
+  }, []);
+
+  const persistUser = useCallback((nextUser?: User, appToken?: string) => {
     if (nextUser) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
       setUser(nextUser);
     } else {
-      localStorage.removeItem(STORAGE_KEY);
-      setUser(undefined);
+      clearSession();
     }
 
-    if (accessToken) {
-      localStorage.setItem(TOKEN_KEY, accessToken);
-    } else if (!nextUser) {
-      localStorage.removeItem(TOKEN_KEY);
+    if (appToken) {
+      localStorage.setItem(TOKEN_KEY, appToken);
     }
-  }, []);
+  }, [clearSession]);
 
   useEffect(() => {
     const handleRedirectResult = async () => {
@@ -123,12 +121,12 @@ const AuthProviderWrapper = ({ children }: AuthProviderWrapperProps) => {
       }
 
       const params = new URLSearchParams(hash);
-      const accessToken = params.get('access_token');
+      const idToken = params.get('id_token');
       const returnedState = params.get('state');
       const oauthError = params.get('error');
       const expectedState = sessionStorage.getItem(STATE_KEY);
 
-      if (!accessToken && !oauthError) {
+      if (!idToken && !oauthError) {
         setIsLoading(false);
         return;
       }
@@ -138,6 +136,7 @@ const AuthProviderWrapper = ({ children }: AuthProviderWrapperProps) => {
         window.history.replaceState({}, document.title, window.location.pathname);
         sessionStorage.removeItem(STATE_KEY);
         sessionStorage.removeItem(RETURN_TO_KEY);
+        sessionStorage.removeItem(NONCE_KEY);
         setIsLoading(false);
         return;
       }
@@ -148,27 +147,25 @@ const AuthProviderWrapper = ({ children }: AuthProviderWrapperProps) => {
         window.history.replaceState({}, document.title, window.location.pathname);
         sessionStorage.removeItem(STATE_KEY);
         sessionStorage.removeItem(RETURN_TO_KEY);
+        sessionStorage.removeItem(NONCE_KEY);
         setIsLoading(false);
         return;
       }
 
       try {
-        const response = await fetch(
-          'https://www.googleapis.com/oauth2/v3/userinfo',
+        const response = await apiClient.post<AuthLoginResponse>(
+          'titlesnap/auth/login',
           {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
+            idToken,
           }
         );
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch Google user profile.');
-        }
-
-        const profile = (await response.json()) as Record<string, unknown>;
-        const nextUser = normalizeGoogleUser(profile);
-        persistUser(nextUser, accessToken);
+        persistUser(
+          {
+            ...response.data,
+            sub: response.data.sub || response.data.google_sub,
+          },
+          response.token
+        );
 
         const returnTo = sessionStorage.getItem(RETURN_TO_KEY) || '/';
         window.history.replaceState({}, document.title, returnTo);
@@ -182,6 +179,7 @@ const AuthProviderWrapper = ({ children }: AuthProviderWrapperProps) => {
       } finally {
         sessionStorage.removeItem(STATE_KEY);
         sessionStorage.removeItem(RETURN_TO_KEY);
+        sessionStorage.removeItem(NONCE_KEY);
         setIsLoading(false);
       }
     };
@@ -197,21 +195,30 @@ const AuthProviderWrapper = ({ children }: AuthProviderWrapperProps) => {
     }
 
     const state = crypto.randomUUID();
+    const nonce = crypto.randomUUID();
     sessionStorage.setItem(STATE_KEY, state);
+    sessionStorage.setItem(NONCE_KEY, nonce);
     sessionStorage.setItem(
       RETURN_TO_KEY,
       `${window.location.pathname}${window.location.search}`
     );
-    window.location.assign(buildGoogleAuthUrl(clientId, redirectUri, state));
+    window.location.assign(buildGoogleAuthUrl(clientId, redirectUri, state, nonce));
   }, [clientId, redirectUri]);
 
   const logout = useCallback(() => {
-    persistUser(undefined);
-  }, [persistUser]);
+    clearSession();
+  }, [clearSession]);
 
   const getAccessToken = useCallback(async () => {
-    return localStorage.getItem(TOKEN_KEY);
-  }, []);
+    const token = localStorage.getItem(TOKEN_KEY);
+
+    if (!token) {
+      clearSession();
+      return null;
+    }
+
+    return token;
+  }, [clearSession]);
 
   const getIdTokenClaims = useCallback(async () => {
     return user ? { ...user } : null;

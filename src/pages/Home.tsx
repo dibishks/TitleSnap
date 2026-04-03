@@ -1,5 +1,7 @@
 import { useFilms } from '../hooks/useFilms';
 import { useLocation } from '../hooks/LocationContext';
+import { useSeo } from '../hooks/useSeo';
+import HeaderSlider from '../components/HeaderSlider';
 import MovieCard from '../components/MovieCard';
 import type { Film } from '../types/film';
 
@@ -129,26 +131,55 @@ const Home = () => {
   const { selectedLocation } = useLocation();
   const { data: films, loading, error, refetch } = useFilms(selectedLocation?.city_id);
   const hasMovies = films.recommended.length > 0 || films.latest.length > 0;
+  const cityName = selectedLocation?.city_name;
+  const pageTitle = cityName
+    ? `Movies in ${cityName} Today | Movie Title Snaps HD | TitleSnap`
+    : 'Download Movie Title Snaps HD | TitleSnap - Share Movie Moments';
+  const pageDescription = cityName
+    ? `Browse latest movies in ${cityName}, download movie title snaps in HD, and discover theatres, timings, and cinema details on TitleSnap.`
+    : 'Get high-quality movie title snaps for WhatsApp status and Instagram stories. Browse latest movies, download HD title images, and explore theatres near you.';
+  const pageKeywords = [
+    'movie title snap',
+    'movie title images',
+    'movie title cards download',
+    'film title screen images',
+    'movie title screenshots',
+    'cinema title snaps',
+    'download movie title cards',
+    'HD movie title images free',
+    'latest movie title snaps',
+    'movie title images for WhatsApp status',
+    'movie title Instagram story',
+    'latest movies in theatres',
+    cityName ? `movies in ${cityName} today` : '',
+    cityName ? `theatres in ${cityName}` : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  useSeo({
+    title: pageTitle,
+    description: pageDescription,
+    keywords: pageKeywords,
+    image: '/img/title-snap-logo.png',
+    canonicalPath: `${window.location.pathname}${window.location.search}`,
+    structuredData: {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'TitleSnap',
+      url: window.location.origin,
+      description: pageDescription,
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: `${window.location.origin}/movies`,
+        'query-input': 'required name=movie title snap',
+      },
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-16 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-            Discover Movie Title Cards
-          </h1>
-          <p className="text-lg md:text-xl text-blue-100 max-w-2xl mx-auto">
-            Browse and download stunning title cards from the latest movies.
-            Share them on your social media without disrupting the theater experience.
-          </p>
-          {selectedLocation?.state_name && (
-            <p className="mt-4 text-sm uppercase tracking-[0.2em] text-blue-200">
-              {selectedLocation.state_name}
-            </p>
-          )}
-        </div>
-      </section>
+      <HeaderSlider cityName={cityName} stateName={selectedLocation?.state_name} />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -172,16 +203,68 @@ const Home = () => {
           <>
             <MovieSection
               title="Recommended Movies"
-              description="Curated picks based on this week's movie recommendations"
+              description="Curated movie title snaps and title card moments picked from current releases"
               films={films.recommended}
             />
             <MovieSection
               title="Latest Movies"
-              description="Explore our latest movie title cards"
+              description="Explore the latest movie title images, title screenshots, and fresh cinema snaps"
               films={films.latest}
             />
           </>
         )}
+
+        <section className="mt-12 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-3xl bg-white p-8 shadow-sm dark:bg-gray-800">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">How It Works</h2>
+            <div className="mt-6 space-y-4 text-gray-600 dark:text-gray-300">
+              <p>Browse latest and classic movies in one place.</p>
+              <p>Download clean, high-quality movie title images instantly.</p>
+              <p>Upload your best title snap and share it with the community.</p>
+              <p>Use every snap for status updates, stories, and posts anywhere.</p>
+            </div>
+          </div>
+          <div className="rounded-3xl bg-white p-8 shadow-sm dark:bg-gray-800">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Explore More</h2>
+            <div className="mt-6 space-y-4 text-gray-600 dark:text-gray-300">
+              <p>Latest movies in theatres.</p>
+              <p>Movies near you and local cinema discovery.</p>
+              <p>Theatre listings with contact details.</p>
+              <p>Parking info and venue details for easier planning.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-12 rounded-3xl bg-white p-8 shadow-sm dark:bg-gray-800">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Why TitleSnap</h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[
+              'No more missing the title screen',
+              'No phone distractions in theatres',
+              'High-quality snaps from real users',
+              'Ready for WhatsApp status and Instagram stories',
+              'Discover latest movies in your city',
+              'Find theatres, timings, and details easily',
+            ].map((item) => (
+              <div
+                key={item}
+                className="rounded-2xl border border-gray-200 px-5 py-4 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-200"
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-12 rounded-3xl bg-blue-600 px-8 py-10 text-white shadow-sm">
+          <p className="text-2xl font-semibold md:text-3xl">
+            The movie starts on screen, but the story begins with the title.
+          </p>
+          <p className="mt-4 max-w-3xl text-blue-100">
+            Start exploring movie title cards, download HD snaps, and upload your first title
+            snap for the community.
+          </p>
+        </section>
       </main>
     </div>
   );

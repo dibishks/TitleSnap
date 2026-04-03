@@ -100,17 +100,19 @@ const NavItem = ({ item, isMobile = false, onItemClick }: NavItemProps) => {
 
         {/* Desktop Dropdown Menu */}
         {hasSubItems && isDropdownOpen && (
-          <div className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50 animate-fade-in">
-            {item.subItems?.map((subItem, index) => (
-              <Link
-                key={index}
-                to={subItem.url}
-                className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-                onClick={handleItemClick}
-              >
-                {subItem.label}
-              </Link>
-            ))}
+          <div className="absolute left-0 top-full z-50 w-56 pt-2 animate-fade-in">
+            <div className="rounded-lg border border-gray-200 bg-white py-2 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+              {item.subItems?.map((subItem, index) => (
+                <Link
+                  key={index}
+                  to={subItem.url}
+                  className="block px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 dark:text-gray-300 dark:hover:bg-gray-700"
+                  onClick={handleItemClick}
+                >
+                  {subItem.label}
+                </Link>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -181,4 +183,3 @@ const NavItem = ({ item, isMobile = false, onItemClick }: NavItemProps) => {
 };
 
 export default NavItem;
-

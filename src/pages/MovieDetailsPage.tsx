@@ -1,5 +1,12 @@
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { useMovieDetails } from '../hooks/useMovieDetails';
+import { useSeo } from '../hooks/useSeo';
+import { apiClient } from '../services/api';
+import ImageModal from '../components/ImageModal';
+import TitleSnapCard from '../components/TitleSnapCard';
+import type { MovieSnapsPagination, MovieSnapsResponse, TitleSnap } from '../types/movie';
 
 /**
  * Error State Component
@@ -71,13 +78,284 @@ const formatReleaseDate = (timestamp: string) => {
 const getTrailerUrl = (videoId: string) =>
   videoId ? `https://www.youtube.com/watch?v=${videoId}` : '';
 
+const isAuthExpiredError = (status: number, message: string) =>
+  status === 401 || /invalid or expired token/i.test(message);
+
+const formatReleaseDateForSchema = (timestamp: string) => {
+  const parsed = Number(timestamp);
+
+  if (!parsed) {
+    return undefined;
+  }
+
+  return new Date(parsed * 1000).toISOString();
+};
+
+const toAbsoluteImageUrl = (value: string) => {
+  try {
+    return new URL(value, window.location.origin).toString();
+  } catch {
+    return value;
+  }
+};
+
+interface SnapUploadResponse {
+  status: boolean;
+  data: {
+    message: string;
+    snap: {
+      id: string;
+      movie_id: string;
+      user_id: string;
+      image_url: string;
+      image_key: string;
+      thumbnail_url: string;
+      status: string;
+      created_at: string;
+      updated_at: string;
+    };
+  };
+}
+
+const SNAPS_PAGE_LIMIT = 20;
+
+const mapSnap = (snap: NonNullable<MovieSnapsResponse['data']>['snaps'][number]): TitleSnap => ({
+  id: snap.id,
+  movieId: snap.movie_id,
+  userId: snap.user_id,
+  image: snap.image_url,
+  imageKey: snap.image_key,
+  thumbnailUrl: snap.thumbnail_url,
+  status: snap.status,
+  uploadOn: snap.created_at,
+  updatedAt: snap.updated_at,
+  userName: snap.user?.name || 'Community User',
+  userPicture: snap.user?.picture || '',
+});
+
 /**
  * MovieDetailsPage Component
  * Displays movie details with hero section and movie metadata
  */
 const MovieDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
+  const { isAuthenticated, loginRedirect, getAccessToken, logout } = useAuth();
   const { data: movie, loading, error, refetch } = useMovieDetails(id || '');
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [snaps, setSnaps] = useState<TitleSnap[]>([]);
+  const [snapsLoading, setSnapsLoading] = useState(false);
+  const [snapsError, setSnapsError] = useState<string | null>(null);
+  const [selectedSnap, setSelectedSnap] = useState<TitleSnap | null>(null);
+  const [snapsPagination, setSnapsPagination] = useState<MovieSnapsPagination | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useSeo({
+    title: movie
+      ? `${movie.name} Title Snap Download HD | TitleSnap`
+      : 'Movie Title Snaps | TitleSnap',
+    description: movie
+      ? `Download ${movie.name} title snap images in HD, explore movie details, and discover community-uploaded movie title screenshots on TitleSnap.`
+      : 'Browse movie title snaps and movie details on TitleSnap.',
+    keywords: movie
+      ? [
+          `${movie.name} title snap download`,
+          `${movie.name} title card HD image`,
+          `${movie.name} movie title screenshots`,
+          `${movie.name} title screen download`,
+          'download movie title cards',
+          'high quality movie title screenshots',
+          'movie title images for WhatsApp status',
+        ].join(', ')
+      : 'movie title snaps, movie title images',
+    image: movie?.image || '/img/title-snap-logo.png',
+    type: 'article',
+    canonicalPath: `${window.location.pathname}${window.location.search}`,
+    structuredData: movie
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'Movie',
+          name: movie.name,
+          image: toAbsoluteImageUrl(movie.image),
+          description:
+            movie.description ||
+            `Download ${movie.name} title snap images and browse community title screenshots.`,
+          genre: movie.genres,
+          datePublished: formatReleaseDateForSchema(movie.releaseDate),
+          url: window.location.href,
+        }
+      : undefined,
+  });
+
+  const fetchSnaps = async (page: number, append = false) => {
+    setSnapsLoading(true);
+    setSnapsError(null);
+
+    try {
+      const response = await apiClient.get<MovieSnapsResponse>(
+        `titlesnap/movies/${id}/snaps`,
+        {
+          params: {
+            page,
+            limit: SNAPS_PAGE_LIMIT,
+          },
+        }
+      );
+
+      const nextSnaps = (response.data?.snaps || []).map(mapSnap);
+      setSnaps((previous) => (append ? [...previous, ...nextSnaps] : nextSnaps));
+      setSnapsPagination(response.data?.pagination || null);
+    } catch (err) {
+      setSnapsError(
+        err instanceof Error ? err.message : 'Failed to fetch community title snaps.'
+      );
+      if (!append) {
+        setSnaps([]);
+      }
+    } finally {
+      setSnapsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!id) {
+      return;
+    }
+
+    void fetchSnaps(1);
+  }, [id]);
+
+  const handleUploadClick = async () => {
+    if (!isAuthenticated) {
+      await loginRedirect();
+      return;
+    }
+
+    setUploadMessage(null);
+    setUploadError(null);
+    setShowUploadForm(true);
+  };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    setSelectedFile(file);
+    setUploadMessage(null);
+    setUploadError(null);
+  };
+
+  const handleUploadSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!selectedFile) {
+      setUploadError('Please select an image to upload.');
+      return;
+    }
+
+    const appToken = await getAccessToken();
+
+    if (!appToken) {
+      logout();
+      setShowUploadForm(false);
+      setUploadError('Session expired. Please sign in again.');
+      await loginRedirect();
+      return;
+    }
+
+    setUploading(true);
+    setUploadMessage(null);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+
+      const baseUrl =
+        import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
+      const response = await fetch(
+        `${baseUrl}/titlesnap/movies/${movie.id}/snaps`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${appToken}`,
+          },
+          body: formData,
+        }
+      );
+
+      const result = (await response.json()) as SnapUploadResponse;
+
+      if (!response.ok || !result.status) {
+        const errorMessage = result.data?.message || 'Failed to upload title snap.';
+
+        if (isAuthExpiredError(response.status, errorMessage)) {
+          logout();
+          setShowUploadForm(false);
+          setSelectedFile(null);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+          setUploadError('Session expired. Please sign in again.');
+          await loginRedirect();
+          return;
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      setUploadMessage(result.data.message || 'Image uploaded successfully!');
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      await fetchSnaps(1);
+    } catch (err) {
+      setUploadError(
+        err instanceof Error ? err.message : 'Failed to upload title snap.'
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSnapClick = (snap: TitleSnap) => {
+    setSelectedSnap(snap);
+  };
+
+  const handleSnapShare = async (snap: TitleSnap) => {
+    const shareData = {
+      title: `${movie.name} Title Snap`,
+      text: `Check out this title snap from ${movie.name}`,
+      url: snap.image,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(snap.image);
+        window.alert('Snap link copied. You can now paste it into WhatsApp, Instagram, or Facebook.');
+        return;
+      }
+
+      window.prompt('Copy this snap link:', snap.image);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return;
+      }
+
+      window.prompt('Copy this snap link:', snap.image);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setSelectedSnap(null);
+  };
 
   if (loading) {
     return (
@@ -204,41 +482,166 @@ const MovieDetailsPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <section className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              About This Movie
+              Community Title Snaps
             </h2>
-            <p className="text-gray-700 dark:text-gray-300 leading-7">
-              {movie.description || 'Description not available.'}
-            </p>
-
-            {movie.reasonToWatch && (
-              <div className="mt-6 rounded-xl bg-blue-50 dark:bg-blue-950/40 p-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Reason to Watch
-                </h3>
-                <p className="text-gray-700 dark:text-gray-300">{movie.reasonToWatch}</p>
+            {snapsLoading && snaps.length === 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="rounded-xl bg-gray-100 dark:bg-gray-900/50 overflow-hidden animate-pulse"
+                  >
+                    <div className="aspect-video bg-gray-300 dark:bg-gray-700" />
+                    <div className="p-4 space-y-3">
+                      <div className="h-4 w-1/2 rounded bg-gray-300 dark:bg-gray-700" />
+                      <div className="h-3 w-1/3 rounded bg-gray-300 dark:bg-gray-700" />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
-            {movie.premiumTags.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                  Highlights
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {movie.premiumTags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex rounded-full bg-purple-100 dark:bg-purple-900/50 px-3 py-1 text-sm font-medium text-purple-700 dark:text-purple-200"
-                    >
-                      {tag}
-                    </span>
+            {snapsError && snaps.length === 0 && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-900/40 dark:bg-red-900/20">
+                <p className="text-sm text-red-700 dark:text-red-300">{snapsError}</p>
+                <button
+                  type="button"
+                  onClick={() => void fetchSnaps(1)}
+                  className="mt-4 inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {!snapsLoading && !snapsError && snaps.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 p-10 text-center">
+                <p className="text-lg font-medium text-gray-900 dark:text-white">
+                  No community title snaps yet
+                </p>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  Be the first user to upload one for this movie.
+                </p>
+              </div>
+            )}
+
+            {snaps.length > 0 && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {snaps.map((snap) => (
+                    <TitleSnapCard
+                      key={snap.id}
+                      titleSnap={snap}
+                      movieName={movie.name}
+                      onClick={() => handleSnapClick(snap)}
+                      onShare={() => void handleSnapShare(snap)}
+                    />
                   ))}
                 </div>
-              </div>
+
+                {snapsPagination?.has_more && (
+                  <div className="mt-8 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => void fetchSnaps((snapsPagination.page || 1) + 1, true)}
+                      disabled={snapsLoading}
+                      className="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-600 px-5 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {snapsLoading ? 'Loading...' : 'Load More'}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </section>
 
           <div className="space-y-6">
+            <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                Title Snap Upload
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Upload a single title snap for {movie.name}. If you are not signed in,
+                clicking the upload button will take you to login first.
+              </p>
+
+              <div className="mt-4">
+                {!showUploadForm && (
+                  <button
+                    type="button"
+                    onClick={() => void handleUploadClick()}
+                    className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    Title Snap Upload
+                  </button>
+                )}
+
+                {showUploadForm && (
+                  <form onSubmit={(event) => void handleUploadSubmit(event)} className="space-y-4">
+                    <div>
+                      <label
+                        htmlFor="title-snap-image"
+                        className="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
+                      >
+                        Select image
+                      </label>
+                      <input
+                        ref={fileInputRef}
+                        id="title-snap-image"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-3 text-sm text-gray-900 dark:text-white file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
+                      />
+                    </div>
+
+                    {selectedFile && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {selectedFile.name}
+                      </p>
+                    )}
+
+                    {uploadMessage && (
+                      <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                        {uploadMessage}
+                      </div>
+                    )}
+
+                    {uploadError && (
+                      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                        {uploadError}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-3">
+                      <button
+                        type="submit"
+                        disabled={uploading}
+                        className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {uploading ? 'Uploading...' : 'Upload Image'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUploadForm(false);
+                          setSelectedFile(null);
+                          setUploadError(null);
+                          setUploadMessage(null);
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = '';
+                          }
+                        }}
+                        className="inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 px-5 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </section>
+
             <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                 Movie Details
@@ -302,6 +705,21 @@ const MovieDetailsPage = () => {
           </div>
         </div>
       </main>
+
+      {selectedSnap && (
+        <ImageModal
+          isOpen={Boolean(selectedSnap)}
+          onClose={handleCloseModal}
+          imageSrc={selectedSnap.image}
+          imageAlt={`Title snap for ${movie.name}`}
+          uploaderName={selectedSnap.userName}
+          uploadDate={new Date(selectedSnap.uploadOn).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          })}
+        />
+      )}
     </div>
   );
 };

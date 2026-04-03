@@ -25,6 +25,31 @@ const ImageModal = ({
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(imageSrc);
+
+      if (!response.ok) {
+        throw new Error('Failed to download image');
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const extension = blob.type.split('/')[1] || 'jpg';
+
+      link.href = objectUrl;
+      link.download = `titlesnap.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      console.error('Download failed:', error);
+      window.open(imageSrc, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   // Handle ESC key to close modal
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -114,11 +139,8 @@ const ImageModal = ({
 
           {/* Download Button */}
           <div className="mt-4 flex gap-3">
-            <a
-              href={imageSrc}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={handleDownload}
               className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black"
             >
               <svg
@@ -135,7 +157,7 @@ const ImageModal = ({
                 />
               </svg>
               Download
-            </a>
+            </button>
             <button
               onClick={onClose}
               className="inline-flex items-center px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-black"
@@ -156,4 +178,3 @@ const ImageModal = ({
 };
 
 export default ImageModal;
-
