@@ -249,6 +249,11 @@ const MovieDetailsPage = () => {
   const handleUploadSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (!movie) {
+      setUploadError('Movie details are not available yet. Please try again.');
+      return;
+    }
+
     if (!selectedFile) {
       setUploadError('Please select an image to upload.');
       return;
@@ -325,9 +330,10 @@ const MovieDetailsPage = () => {
   };
 
   const handleSnapShare = async (snap: TitleSnap) => {
+    const movieName = movie?.name || 'Movie';
     const shareData = {
-      title: `${movie.name} Title Snap`,
-      text: `Check out this title snap from ${movie.name}`,
+      title: `${movieName} Title Snap`,
+      text: `Check out this title snap from ${movieName}`,
       url: snap.image,
     };
 
