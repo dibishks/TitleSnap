@@ -1,7 +1,7 @@
 FROM node:22 AS builder
 
 WORKDIR /app
-ENV VITE_API_BASE_URL=https://api-greymarketwiki:3000/api/v1
+ENV VITE_API_BASE_URL=https://api-greymarketwiki/api/v1
 
 COPY package*.json ./
 RUN npm ci
