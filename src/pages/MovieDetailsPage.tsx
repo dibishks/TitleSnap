@@ -188,7 +188,7 @@ const MovieDetailsPage = () => {
           'movie title images for WhatsApp status',
         ].join(', ')
       : 'movie title snaps, movie title images',
-    image: movie?.image || '/img/title-snap-logo.png',
+    image: movie?.image || '/img/titlesnap-banner-moto.png',
     type: 'article',
     canonicalPath: `${window.location.pathname}${window.location.search}`,
     structuredData: movie

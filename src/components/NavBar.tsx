@@ -40,6 +40,10 @@ const menuItems: MenuItem[] = [
       { label: 'Title Snap Giveaway', url: '/contests/title-snap' },
     ],
   },
+  {
+    label: 'Title Snaps',
+    url: '/titlesnaps',
+  },
 ];
 
 /**

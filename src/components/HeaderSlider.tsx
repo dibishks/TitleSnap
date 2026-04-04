@@ -39,7 +39,7 @@ const HeaderSlider = ({ cityName, stateName }: HeaderSliderProps) => {
         'Community uploads from real movie lovers',
       ],
       ctaLabel: 'Explore Title Snaps',
-      ctaHref: '/movies',
+      ctaHref: '/titlesnaps',
       secondaryLabel: 'How It Works',
       secondaryHref: '/about',
       accentClassName: 'from-violet-500/40 via-fuchsia-500/18 to-transparent',

@@ -12,6 +12,7 @@ interface SeoConfig {
 }
 
 const DEFAULT_SITE_NAME = 'TitleSnap';
+const DEFAULT_SOCIAL_IMAGE = '/img/titlesnap-banner-moto.png';
 
 const ensureMetaTag = (selector: string, attribute: 'name' | 'property', value: string) => {
   let element = document.head.querySelector<HTMLMetaElement>(selector);
@@ -61,7 +62,7 @@ export const useSeo = ({
 }: SeoConfig) => {
   useEffect(() => {
     const canonicalUrl = toAbsoluteUrl(canonicalPath || `${window.location.pathname}${window.location.search}`);
-    const imageUrl = toAbsoluteUrl(image);
+    const imageUrl = toAbsoluteUrl(image || DEFAULT_SOCIAL_IMAGE);
 
     document.title = title;
 
@@ -77,10 +78,12 @@ export const useSeo = ({
     ensureMetaTag('meta[property="og:description"]', 'property', 'og:description').content =
       description;
     ensureMetaTag('meta[property="og:url"]', 'property', 'og:url').content = canonicalUrl;
+    ensureMetaTag('meta[property="og:image:alt"]', 'property', 'og:image:alt').content = title;
 
     ensureMetaTag('meta[name="twitter:card"]', 'name', 'twitter:card').content = imageUrl
       ? 'summary_large_image'
       : 'summary';
+    ensureMetaTag('meta[name="twitter:url"]', 'name', 'twitter:url').content = canonicalUrl;
     ensureMetaTag('meta[name="twitter:title"]', 'name', 'twitter:title').content = title;
     ensureMetaTag(
       'meta[name="twitter:description"]',
@@ -88,10 +91,11 @@ export const useSeo = ({
       'twitter:description'
     ).content = description;
 
-    if (imageUrl) {
-      ensureMetaTag('meta[property="og:image"]', 'property', 'og:image').content = imageUrl;
-      ensureMetaTag('meta[name="twitter:image"]', 'name', 'twitter:image').content = imageUrl;
-    }
+    ensureMetaTag('meta[property="og:image"]', 'property', 'og:image').content = imageUrl;
+    ensureMetaTag('meta[property="og:image:secure_url"]', 'property', 'og:image:secure_url').content =
+      imageUrl;
+    ensureMetaTag('meta[name="twitter:image"]', 'name', 'twitter:image').content = imageUrl;
+    ensureMetaTag('meta[name="twitter:image:alt"]', 'name', 'twitter:image:alt').content = title;
 
     const canonical = ensureLinkTag('link[rel="canonical"]', 'canonical');
     canonical.href = canonicalUrl;

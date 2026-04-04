@@ -31,6 +31,13 @@ export interface MoviesApiData {
   movies_listing_grid?: MoviesApiItem[];
 }
 
+export interface MoviesPagination {
+  page: number;
+  limit: number;
+  total: number;
+  has_more: boolean;
+}
+
 export interface FilmsResponse {
   status: boolean;
   data?: MoviesApiData;
@@ -39,4 +46,13 @@ export interface FilmsResponse {
 export interface FilmsData {
   recommended: Film[];
   latest: Film[];
+}
+
+export interface AllMoviesResponse {
+  status: boolean;
+  data?: {
+    city: null;
+    movies: MoviesApiItem[];
+    pagination: MoviesPagination;
+  };
 }

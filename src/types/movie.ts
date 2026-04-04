@@ -114,6 +114,33 @@ export interface MyUploadsResponse {
   };
 }
 
+export interface PublicUploadedSnapMovie {
+  movie_id: string;
+  name: string;
+  genres: string[];
+  image: string;
+}
+
+export interface PublicTitleSnap {
+  id: string;
+  movie_id: string;
+  image_url: string;
+  image_key: string;
+  thumbnail_url: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  movie: PublicUploadedSnapMovie;
+}
+
+export interface PublicSnapsResponse {
+  status: boolean;
+  data?: {
+    snaps: PublicTitleSnap[];
+    pagination: MovieSnapsPagination;
+  };
+}
+
 export interface MovieDetail {
   id: string;
   image: string;

@@ -4,7 +4,7 @@
  */
 
 //const API_BASE_URL = 'https://mp87a2fa00d3fb7717f4.free.beeceptor.com';
-const API_BASE_URL =
+export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
 
 export class ApiError extends Error {

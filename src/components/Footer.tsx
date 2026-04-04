@@ -32,6 +32,7 @@ const socialLinks = [
 ];
 
 const footerLinks = [
+  { label: 'All Title Snaps', to: '/titlesnaps' },
   { label: 'Privacy Policy', to: '/privacy-policy' },
   { label: 'Terms and Conditions', to: '/terms-and-conditions' },
   { label: 'Contact Us', to: '/contact' },

@@ -5,6 +5,7 @@ import { ThemeProvider } from './hooks/ThemeContext';
 import NavBar from './components/NavBar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
+import MoviesPage from './pages/MoviesPage';
 import About from './pages/About';
 import ContactUs from './pages/ContactUs';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -13,6 +14,7 @@ import MovieDetailsPage from './pages/MovieDetailsPage';
 import MyUploadsPage from './pages/MyUploadsPage';
 import ProfilePage from './pages/ProfilePage';
 import ContestsPage from './pages/ContestsPage';
+import TitleSnapsPage from './pages/TitleSnapsPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 
 const Services: React.FC = () => (
@@ -56,7 +58,8 @@ function App() {
                 <Route path="/contact" element={<ContactUs />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
-                <Route path="/movies" element={<Home />} />
+                <Route path="/movies" element={<MoviesPage />} />
+                <Route path="/titlesnaps" element={<TitleSnapsPage />} />
                 <Route path="/movies/:id" element={<MovieDetailsPage />} />
                 <Route path="/theatres" element={<Services />} />
                 <Route path="/contests" element={<ContestsPage />} />

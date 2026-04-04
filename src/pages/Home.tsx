@@ -161,7 +161,7 @@ const Home = () => {
     title: pageTitle,
     description: pageDescription,
     keywords: pageKeywords,
-    image: '/img/title-snap-logo.png',
+    image: '/img/titlesnap-banner-moto.png',
     canonicalPath: `${window.location.pathname}${window.location.search}`,
     structuredData: {
       '@context': 'https://schema.org',
