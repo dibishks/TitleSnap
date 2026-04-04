@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 interface HeaderSliderProps {
   cityName?: string;
+  stateName?: string;
 }
 
 interface Slide {
@@ -20,9 +21,10 @@ interface Slide {
 
 const AUTOPLAY_DELAY = 5000;
 
-const HeaderSlider = ({ cityName }: HeaderSliderProps) => {
+const HeaderSlider = ({ cityName, stateName }: HeaderSliderProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const streamingLocationLabel = stateName || cityName;
 
   const slides: Slide[] = [
     {
@@ -62,11 +64,10 @@ const HeaderSlider = ({ cityName }: HeaderSliderProps) => {
     {
       id: 'streaming',
       eyebrow: 'Latest Streaming Movies',
-      title: cityName
-        ? `Trending streaming picks for ${cityName}`
+      title: streamingLocationLabel
+        ? `Trending OTT picks in ${streamingLocationLabel}`
         : 'Discover the latest streaming movies',
-      description:
-        'Keep this slide ready for upcoming OTT highlights, title-card collections, and shareable movie moments from the newest streaming releases.',
+      description: 'Browse the latest OTT releases and trending movies around you.',
       points: [
         'Space for new OTT releases',
         'Streaming highlights and title images',
@@ -111,20 +112,22 @@ const HeaderSlider = ({ cityName }: HeaderSliderProps) => {
                 className="relative min-w-full overflow-hidden px-6 py-8 sm:px-8 md:px-10 md:py-12"
                 aria-hidden={index !== activeIndex}
               >
-                <div
-                  className={`absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l ${slide.accentClassName}`}
-                />
-                <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_320px] lg:items-end">
+                {(index === 0 || index === 1 || index === 2) && (
+                  <div
+                    className={`absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l ${slide.accentClassName}`}
+                  />
+                )}
+                <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_320px] lg:items-center">
                   <div className="max-w-3xl">
                     <p className="text-sm font-semibold uppercase tracking-[0.26em] text-white/60">
                       {slide.eyebrow}
                     </p>
                     {index === 0 ? (
-                      <h1 className="mt-4 max-w-3xl text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
+                      <h1 className="mt-4 max-w-3xl break-words text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
                         {slide.title}
                       </h1>
                     ) : (
-                      <h2 className="mt-4 max-w-3xl text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
+                      <h2 className="mt-4 max-w-3xl break-words text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
                         {slide.title}
                       </h2>
                     )}
@@ -148,20 +151,30 @@ const HeaderSlider = ({ cityName }: HeaderSliderProps) => {
                     </div>
                   </div>
 
-                  <div className="relative">
-                    <div className="rounded-[1.75rem] border border-white/10 bg-black/20 p-5 shadow-2xl">
-                      <div className="space-y-3">
-                        {slide.points.map((point) => (
-                          <div
-                            key={point}
-                            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80"
-                          >
-                            {point}
-                          </div>
-                        ))}
+                  {(index === 0 || index === 1 || index === 2) && (
+                    <div className="relative">
+                      <div className="h-[220px] overflow-hidden rounded-[1.75rem] sm:h-[260px] lg:h-[340px]">
+                        <img
+                          src={
+                            index === 0
+                              ? '/img/banner1-thumb.png'
+                              : index === 1
+                                ? '/img/banner2-offer.png'
+                                : '/img/banner3-discover.png'
+                          }
+                          alt={
+                            index === 0
+                              ? 'TitleSnap banner preview'
+                              : index === 1
+                                ? 'TitleSnap offer banner preview'
+                                : 'TitleSnap discovery banner preview'
+                          }
+                          className="h-full w-full object-contain"
+                          loading="eager"
+                        />
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </article>
             ))}
