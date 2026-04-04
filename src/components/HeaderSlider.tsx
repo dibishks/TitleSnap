@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 
 interface HeaderSliderProps {
   cityName?: string;
-  stateName?: string;
 }
 
 interface Slide {
@@ -21,7 +20,7 @@ interface Slide {
 
 const AUTOPLAY_DELAY = 5000;
 
-const HeaderSlider = ({ cityName, stateName }: HeaderSliderProps) => {
+const HeaderSlider = ({ cityName }: HeaderSliderProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
