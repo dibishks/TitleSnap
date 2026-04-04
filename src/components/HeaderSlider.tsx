@@ -44,6 +44,23 @@ const HeaderSlider = ({ cityName, stateName }: HeaderSliderProps) => {
       accentClassName: 'from-violet-500/40 via-fuchsia-500/18 to-transparent',
     },
     {
+      id: 'offers',
+      eyebrow: 'Offers',
+      title: 'Snap. Share. Win.',
+      description:
+        'Upload your movie title snap and win your favorite movie ticket every month!',
+      points: [
+        'Perfect for promotions and offers',
+        'Works for contests or campaign banners',
+        'Simple content area you can update anytime',
+      ],
+      ctaLabel: 'View Contests',
+      ctaHref: '/contests',
+      secondaryLabel: 'Contact Us',
+      secondaryHref: '/contact',
+      accentClassName: 'from-purple-500/35 via-violet-500/18 to-transparent',
+    },
+    {
       id: 'streaming',
       eyebrow: 'Latest Streaming Movies',
       title: cityName
@@ -61,23 +78,6 @@ const HeaderSlider = ({ cityName, stateName }: HeaderSliderProps) => {
       secondaryLabel: 'Latest Releases',
       secondaryHref: '/movies',
       accentClassName: 'from-violet-500/38 via-purple-500/18 to-transparent',
-    },
-    {
-      id: 'offers',
-      eyebrow: 'Offers',
-      title: 'Snap. Share. Win.',
-      description:
-        'Upload your movie title snap and win your favorite movie ticket every month!',
-      points: [
-        'Perfect for promotions and offers',
-        'Works for contests or campaign banners',
-        'Simple content area you can update anytime',
-      ],
-      ctaLabel: 'View Contests',
-      ctaHref: '/contests',
-      secondaryLabel: 'Contact Us',
-      secondaryHref: '/contact',
-      accentClassName: 'from-purple-500/35 via-violet-500/18 to-transparent',
     },
   ];
 
@@ -97,17 +97,6 @@ const HeaderSlider = ({ cityName, stateName }: HeaderSliderProps) => {
     <section className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-violet-600 to-purple-600 text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.16),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(76,29,149,0.34),_transparent_42%)]" />
       <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-16 lg:px-8">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.28em] text-white/70">
-            Featured Highlights
-          </div>
-          {(cityName || stateName) && (
-            <div className="text-right text-xs uppercase tracking-[0.24em] text-white/45">
-              {[cityName, stateName].filter(Boolean).join(', ')}
-            </div>
-          )}
-        </div>
-
         <div
           className="overflow-hidden rounded-[2rem] border border-white/15 bg-white/10 shadow-[0_24px_80px_rgba(76,29,149,0.35)] backdrop-blur-sm"
           onMouseEnter={() => setIsPaused(true)}
@@ -162,10 +151,7 @@ const HeaderSlider = ({ cityName, stateName }: HeaderSliderProps) => {
 
                   <div className="relative">
                     <div className="rounded-[1.75rem] border border-white/10 bg-black/20 p-5 shadow-2xl">
-                      <p className="text-xs uppercase tracking-[0.24em] text-white/45">
-                        Slide {index + 1} of {slides.length}
-                      </p>
-                      <div className="mt-5 space-y-3">
+                      <div className="space-y-3">
                         {slide.points.map((point) => (
                           <div
                             key={point}

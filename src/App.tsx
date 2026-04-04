@@ -12,6 +12,7 @@ import TermsAndConditions from './pages/TermsAndConditions';
 import MovieDetailsPage from './pages/MovieDetailsPage';
 import MyUploadsPage from './pages/MyUploadsPage';
 import ProfilePage from './pages/ProfilePage';
+import ContestsPage from './pages/ContestsPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 
 const Services: React.FC = () => (
@@ -58,8 +59,8 @@ function App() {
                 <Route path="/movies" element={<Home />} />
                 <Route path="/movies/:id" element={<MovieDetailsPage />} />
                 <Route path="/theatres" element={<Services />} />
-                <Route path="/contests" element={<Services />} />
-                <Route path="/contests/:slug" element={<Services />} />
+                <Route path="/contests" element={<ContestsPage />} />
+                <Route path="/contests/:slug" element={<ContestsPage />} />
                 <Route
                   path="/profile"
                   element={

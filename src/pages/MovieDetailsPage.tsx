@@ -99,6 +99,23 @@ const toAbsoluteImageUrl = (value: string) => {
   }
 };
 
+const getUploadDebugContext = (file: File | null, requestUrl: string, hasToken: boolean) => ({
+  userAgent: navigator.userAgent,
+  pageUrl: window.location.href,
+  origin: window.location.origin,
+  online: navigator.onLine,
+  requestUrl,
+  hasToken,
+  file: file
+    ? {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        lastModified: file.lastModified,
+      }
+    : null,
+});
+
 interface SnapUploadResponse {
   status: boolean;
   data: {
@@ -279,8 +296,16 @@ const MovieDetailsPage = () => {
 
       const baseUrl =
         import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
+      const requestUrl = `${baseUrl}/titlesnap/movies/${movie.id}/snaps`;
+
+      console.groupCollapsed('[TitleSnap Upload] Starting upload');
+      console.log(
+        '[TitleSnap Upload] Request context:',
+        getUploadDebugContext(selectedFile, requestUrl, Boolean(appToken))
+      );
+
       const response = await fetch(
-        `${baseUrl}/titlesnap/movies/${movie.id}/snaps`,
+        requestUrl,
         {
           method: 'POST',
           headers: {
@@ -289,11 +314,20 @@ const MovieDetailsPage = () => {
           body: formData,
         }
       );
+      const responseText = await response.text();
+      let result: SnapUploadResponse | null = null;
 
-      const result = (await response.json()) as SnapUploadResponse;
+      try {
+        result = responseText ? (JSON.parse(responseText) as SnapUploadResponse) : null;
+      } catch (parseError) {
+        console.error('[TitleSnap Upload] Failed to parse upload response JSON:', parseError);
+      }
 
-      if (!response.ok || !result.status) {
-        const errorMessage = result.data?.message || 'Failed to upload title snap.';
+      console.log('[TitleSnap Upload] Response status:', response.status, response.statusText);
+      console.log('[TitleSnap Upload] Response body:', responseText);
+
+      if (!response.ok || !result?.status) {
+        const errorMessage = result?.data?.message || 'Failed to upload title snap.';
 
         if (isAuthExpiredError(response.status, errorMessage)) {
           logout();
@@ -317,10 +351,22 @@ const MovieDetailsPage = () => {
       }
       await fetchSnaps(1);
     } catch (err) {
+      console.error('[TitleSnap Upload] Upload failed before completion:', err);
+      console.log(
+        '[TitleSnap Upload] Failure context:',
+        getUploadDebugContext(
+          selectedFile,
+          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1'}/titlesnap/movies/${movie.id}/snaps`,
+          Boolean(appToken)
+        )
+      );
       setUploadError(
-        err instanceof Error ? err.message : 'Failed to upload title snap.'
+        err instanceof Error
+          ? `${err.message}. Check the browser console for upload diagnostics.`
+          : 'Failed to upload title snap. Check the browser console for upload diagnostics.'
       );
     } finally {
+      console.groupEnd();
       setUploading(false);
     }
   };
