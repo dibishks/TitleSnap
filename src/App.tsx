@@ -15,6 +15,7 @@ import MyUploadsPage from './pages/MyUploadsPage';
 import ProfilePage from './pages/ProfilePage';
 import ContestsPage from './pages/ContestsPage';
 import TitleSnapsPage from './pages/TitleSnapsPage';
+import TheatresPage from './pages/TheatresPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 
 const Services: React.FC = () => (
@@ -61,7 +62,7 @@ function App() {
                 <Route path="/movies" element={<MoviesPage />} />
                 <Route path="/titlesnaps" element={<TitleSnapsPage />} />
                 <Route path="/movies/:id" element={<MovieDetailsPage />} />
-                <Route path="/theatres" element={<Services />} />
+                <Route path="/theatres" element={<TheatresPage />} />
                 <Route path="/contests" element={<ContestsPage />} />
                 <Route path="/contests/:slug" element={<ContestsPage />} />
                 <Route

@@ -5,6 +5,7 @@
 export interface SubMenuItem {
   label: string;
   url: string;
+  onClick?: () => void;
 }
 
 export interface MenuItem {
@@ -19,4 +20,3 @@ export interface NavBarProps {
   onLogin?: () => void;
   onLogout?: () => void;
 }
-

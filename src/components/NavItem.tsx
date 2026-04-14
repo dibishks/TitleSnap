@@ -107,7 +107,10 @@ const NavItem = ({ item, isMobile = false, onItemClick }: NavItemProps) => {
                   key={index}
                   to={subItem.url}
                   className="block px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 dark:text-gray-300 dark:hover:bg-gray-700"
-                  onClick={handleItemClick}
+                  onClick={() => {
+                    subItem.onClick?.();
+                    handleItemClick();
+                  }}
                 >
                   {subItem.label}
                 </Link>
@@ -156,7 +159,10 @@ const NavItem = ({ item, isMobile = false, onItemClick }: NavItemProps) => {
                   key={index}
                   to={subItem.url}
                   className="block px-8 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  onClick={handleItemClick}
+                  onClick={() => {
+                    subItem.onClick?.();
+                    handleItemClick();
+                  }}
                 >
                   {subItem.label}
                 </Link>

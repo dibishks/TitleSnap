@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { MenuItem } from '../types/navigation';
 import Logo from './Logo';
 import NavItem from './NavItem';
@@ -7,31 +8,18 @@ import Auth0LoginButton from './auth/Auth0LoginButton';
 import UserMenu from './auth/UserMenu';
 import LocationPicker from './LocationPicker';
 import { useAuth } from '../hooks/useAuth';
+import { useLocation } from '../hooks/LocationContext';
+import { apiClient, ApiError } from '../services/api';
+import type { CitiesResponse, CityLocationItem } from '../types/location';
 
 /**
  * Navigation Menu Data
  * Can be moved to a separate config file or fetched from API
  */
-const menuItems: MenuItem[] = [
+const baseMenuItems: MenuItem[] = [
   {
     label: 'Home',
     url: '/',
-  },
-  {
-    label: 'Movies',
-    subItems: [
-      { label: 'Kochi', url: '/movies?location=kochi' },
-      { label: 'Bangalore', url: '/movies?location=bangalore' },
-      { label: 'Mumbai', url: '/movies?location=mumbai' },
-    ],
-  },
-  {
-    label: 'Theatres',
-    subItems: [
-      { label: 'Kochi', url: '/theatres?location=kochi' },
-      { label: 'Bangalore', url: '/theatres?location=bangalore' },
-      { label: 'Mumbai', url: '/theatres?location=mumbai' },
-    ],
   },
   {
     label: 'Contests',
@@ -52,7 +40,37 @@ const menuItems: MenuItem[] = [
  */
 const NavBar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [popularCities, setPopularCities] = useState<CityLocationItem[]>([]);
   const { isAuthenticated } = useAuth();
+  const { setSelectedLocation } = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchPopularCities = async () => {
+      try {
+        const response = await apiClient.get<CitiesResponse>('titlesnap/states', {
+          params: { is_popular_city: true },
+        });
+
+        const uniqueCities = Array.from(
+          new Map(
+            (response.data || [])
+              .filter((item) => item.city_id && item.city_name)
+              .map((item) => [item.city_id, item])
+          ).values()
+        ).sort((left, right) => left.city_name.localeCompare(right.city_name));
+
+        setPopularCities(uniqueCities);
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          console.error('Failed to fetch popular cities', error);
+        }
+        setPopularCities([]);
+      }
+    };
+
+    void fetchPopularCities();
+  }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -61,6 +79,39 @@ const NavBar = () => {
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
   };
+
+  const moviesSubItems =
+    popularCities.length > 0
+      ? popularCities.map((city) => ({
+          label: city.city_name,
+          url: '/',
+          onClick: () => {
+            setSelectedLocation(city);
+            navigate('/');
+          },
+        }))
+      : [];
+
+  const theatresSubItems =
+    popularCities.length > 0
+      ? popularCities.map((city) => ({
+          label: city.city_name,
+          url: `/theatres?location=${encodeURIComponent(city.city_key || city.cleaned_city_name || city.city_name)}`,
+        }))
+      : [];
+
+  const menuItems: MenuItem[] = [
+    baseMenuItems[0],
+    {
+      label: 'Movies',
+      subItems: moviesSubItems,
+    },
+    {
+      label: 'Theatres',
+      subItems: theatresSubItems,
+    },
+    ...baseMenuItems.slice(1),
+  ];
 
   return (
     <nav className="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-md">

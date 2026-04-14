@@ -7,24 +7,36 @@ import {
   type ReactNode,
 } from 'react';
 import { useStates } from './useStates';
-import type { StateLocationItem } from '../types/location';
+import type { CityLocationItem } from '../types/location';
 
 interface LocationContextValue {
-  selectedLocation: StateLocationItem | null;
-  states: StateLocationItem[];
+  selectedLocation: CityLocationItem | null;
+  states: CityLocationItem[];
   loading: boolean;
   error: string | null;
-  setSelectedLocation: (location: StateLocationItem) => void;
+  setSelectedLocation: (location: CityLocationItem) => void;
 }
 
-const DEFAULT_STATE = 'Kerala';
+const DEFAULT_CITY_KEYS = ['trivandrum', 'thiruvananthapuram'];
 const STORAGE_KEY = 'titlesnap.selected_location';
 
 const LocationContext = createContext<LocationContextValue | undefined>(undefined);
 
+const normalizeCityValue = (value?: string) => value?.trim().toLowerCase() || '';
+
+const isDefaultCity = (location: CityLocationItem) => {
+  const normalizedValues = [
+    normalizeCityValue(location.city_name),
+    normalizeCityValue(location.city_key),
+    normalizeCityValue(location.cleaned_city_name),
+  ];
+
+  return DEFAULT_CITY_KEYS.some((key) => normalizedValues.includes(key));
+};
+
 export const LocationProvider = ({ children }: { children: ReactNode }) => {
   const { states, loading, error } = useStates();
-  const [selectedLocation, setSelectedLocationState] = useState<StateLocationItem | null>(
+  const [selectedLocation, setSelectedLocationState] = useState<CityLocationItem | null>(
     () => {
       const stored = localStorage.getItem(STORAGE_KEY);
 
@@ -33,7 +45,7 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
       }
 
       try {
-        return JSON.parse(stored) as StateLocationItem;
+        return JSON.parse(stored) as CityLocationItem;
       } catch {
         localStorage.removeItem(STORAGE_KEY);
         return null;
@@ -47,7 +59,12 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const matchingSelection = selectedLocation
-      ? states.find((item) => item.state_name === selectedLocation.state_name)
+      ? states.find(
+          (item) =>
+            item.city_id === selectedLocation.city_id ||
+            (normalizeCityValue(item.city_name) === normalizeCityValue(selectedLocation.city_name) &&
+              normalizeCityValue(item.state_name) === normalizeCityValue(selectedLocation.state_name))
+        )
       : null;
 
     if (matchingSelection) {
@@ -56,14 +73,13 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const defaultLocation =
-      states.find((item) => item.state_name === DEFAULT_STATE) || states[0];
+    const defaultLocation = states.find(isDefaultCity) || states[0];
 
     setSelectedLocationState(defaultLocation);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultLocation));
   }, [selectedLocation, states]);
 
-  const setSelectedLocation = (location: StateLocationItem) => {
+  const setSelectedLocation = (location: CityLocationItem) => {
     setSelectedLocationState(location);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(location));
   };

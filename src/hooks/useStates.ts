@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import { apiClient, ApiError } from '../services/api';
-import type { StateLocationItem, StatesResponse } from '../types/location';
+import type { CitiesResponse, CityLocationItem } from '../types/location';
 
 interface UseStatesReturn {
-  states: StateLocationItem[];
+  states: CityLocationItem[];
   loading: boolean;
   error: string | null;
 }
 
-const DEFAULT_STATE = 'Kerala';
+const DEFAULT_CITY_KEYS = ['trivandrum', 'thiruvananthapuram'];
+
+const normalizeCityValue = (value?: string) => value?.trim().toLowerCase() || '';
 
 export const useStates = (): UseStatesReturn => {
-  const [states, setStates] = useState<StateLocationItem[]>([]);
+  const [states, setStates] = useState<CityLocationItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,26 +23,36 @@ export const useStates = (): UseStatesReturn => {
       setError(null);
 
       try {
-        const response = await apiClient.get<StatesResponse>('titlesnap/states');
-        const uniqueStatesMap = new Map<string, StateLocationItem>();
+        const response = await apiClient.get<CitiesResponse>('titlesnap/states');
+        const uniqueStatesMap = new Map<string, CityLocationItem>();
 
         (response.data || []).forEach((item) => {
-          if (!item.state_name || uniqueStatesMap.has(item.state_name)) {
+          if (!item.city_id || !item.city_name || uniqueStatesMap.has(item.city_id)) {
             return;
           }
 
-          uniqueStatesMap.set(item.state_name, item);
+          uniqueStatesMap.set(item.city_id, item);
         });
 
         const uniqueStates = Array.from(uniqueStatesMap.values()).sort((left, right) =>
-          left.state_name.localeCompare(right.state_name)
+          left.city_name.localeCompare(right.city_name)
         );
 
+        const defaultCity = uniqueStates.find((item) => {
+          const normalizedValues = [
+            normalizeCityValue(item.city_name),
+            normalizeCityValue(item.city_key),
+            normalizeCityValue(item.cleaned_city_name),
+          ];
+
+          return DEFAULT_CITY_KEYS.some((key) => normalizedValues.includes(key));
+        });
+
         setStates(
-          uniqueStates.some((item) => item.state_name === DEFAULT_STATE)
+          defaultCity
             ? [
-                uniqueStates.find((item) => item.state_name === DEFAULT_STATE)!,
-                ...uniqueStates.filter((item) => item.state_name !== DEFAULT_STATE),
+                defaultCity,
+                ...uniqueStates.filter((item) => item.city_id !== defaultCity.city_id),
               ]
             : uniqueStates
         );
@@ -50,7 +62,7 @@ export const useStates = (): UseStatesReturn => {
         } else if (err instanceof Error) {
           setError(err.message);
         } else {
-          setError('Failed to fetch states.');
+          setError('Failed to fetch cities.');
         }
         setStates([]);
       } finally {
