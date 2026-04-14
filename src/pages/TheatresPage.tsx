@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLocation } from '../hooks/LocationContext';
 import { useSeo } from '../hooks/useSeo';
 import { useTheatres } from '../hooks/useTheatres';
+import { ApiError, apiClient } from '../services/api';
+import type { TheatreItem, TheatresResponse } from '../types/theatre';
 
 const PAGE_SIZE = 20;
 
@@ -13,6 +15,7 @@ const getPageFromSearchParams = (searchParams: URLSearchParams) => {
 
 const TheatresPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { states } = useLocation();
   const currentPage = getPageFromSearchParams(searchParams);
   const selectedCityId = searchParams.get('city_id') || '';
@@ -29,6 +32,11 @@ const TheatresPage = () => {
   const effectiveCityId = selectedCityId || selectedCityFromLocation?.city_id || '';
   const activeSearch = searchParams.get('search') || '';
   const [searchInput, setSearchInput] = useState(activeSearch);
+  const [suggestions, setSuggestions] = useState<TheatreItem[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
+  const searchBoxRef = useRef<HTMLDivElement>(null);
   const selectedCity =
     states.find((item) => item.city_id === effectiveCityId) || selectedCityFromLocation || null;
   const { theatres, pagination, loading, error, refetch } = useTheatres(
@@ -41,6 +49,76 @@ const TheatresPage = () => {
   useEffect(() => {
     setSearchInput(activeSearch);
   }, [activeSearch]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(event.target as Node)) {
+        setIsSuggestionsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    const normalizedSearch = searchInput.trim();
+
+    if (normalizedSearch.length < 2) {
+      setSuggestions([]);
+      setSuggestionsError(null);
+      setSuggestionsLoading(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const fetchSuggestions = async () => {
+        setSuggestionsLoading(true);
+        setSuggestionsError(null);
+
+        try {
+          const response = await apiClient.get<TheatresResponse>('titlesnap/theatres', {
+            params: {
+              search: normalizedSearch,
+              page: 1,
+              limit: 8,
+            },
+          });
+
+          const uniqueSuggestions = Array.from(
+            new Map(
+              (response.data?.theatres || []).map((theatre) => [theatre.theatre_id, theatre])
+            ).values()
+          );
+
+          setSuggestions(uniqueSuggestions);
+          setIsSuggestionsOpen(true);
+        } catch (error) {
+          if (error instanceof ApiError) {
+            setSuggestionsError(error.message);
+          } else if (error instanceof Error) {
+            setSuggestionsError(error.message);
+          } else {
+            setSuggestionsError('Unable to load theatre suggestions.');
+          }
+
+          setSuggestions([]);
+          setIsSuggestionsOpen(true);
+        } finally {
+          setSuggestionsLoading(false);
+        }
+      };
+
+      void fetchSuggestions();
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchInput]);
 
   const totalPages = useMemo(() => {
     const total = pagination?.total || 0;
@@ -138,7 +216,14 @@ const TheatresPage = () => {
 
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsSuggestionsOpen(false);
     updateParams({ page: 1, search: searchInput });
+  };
+
+  const handleSuggestionSelect = (theatre: TheatreItem) => {
+    setSearchInput(theatre.name);
+    setIsSuggestionsOpen(false);
+    navigate(`/theatres/${theatre.theatre_id}`);
   };
 
   const formatDate = (value?: string) => {
@@ -200,14 +285,61 @@ const TheatresPage = () => {
                 Search theatres
               </label>
               <div className="flex gap-3">
-                <input
-                  id="theatre-search"
-                  type="text"
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder="Search by theatre name, for example PVR"
-                  className="w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                />
+                <div className="relative flex-1" ref={searchBoxRef}>
+                  <input
+                    id="theatre-search"
+                    type="text"
+                    value={searchInput}
+                    onChange={(event) => setSearchInput(event.target.value)}
+                    onFocus={() => {
+                      if (searchInput.trim().length >= 2) {
+                        setIsSuggestionsOpen(true);
+                      }
+                    }}
+                    placeholder="Search by theatre name, for example PVR"
+                    className="w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    autoComplete="off"
+                  />
+                  {isSuggestionsOpen && (
+                    <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900">
+                      {suggestionsLoading && (
+                        <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                          Loading suggestions...
+                        </div>
+                      )}
+                      {!suggestionsLoading && suggestionsError && (
+                        <div className="px-4 py-3 text-sm text-red-600 dark:text-red-400">
+                          {suggestionsError}
+                        </div>
+                      )}
+                      {!suggestionsLoading && !suggestionsError && suggestions.length === 0 && (
+                        <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                          No matching theatres found
+                        </div>
+                      )}
+                      {!suggestionsLoading && !suggestionsError && suggestions.length > 0 && (
+                        <div className="max-h-72 overflow-y-auto py-2">
+                          {suggestions.map((suggestion) => (
+                            <button
+                              key={suggestion.theatre_id}
+                              type="button"
+                              onClick={() => handleSuggestionSelect(suggestion)}
+                              className="block w-full px-4 py-3 text-left transition hover:bg-stone-100 dark:hover:bg-gray-800"
+                            >
+                              <span className="block text-sm font-medium text-gray-900 dark:text-white">
+                                {suggestion.name}
+                              </span>
+                              <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+                                {suggestion.city_name}
+                                {suggestion.state_name ? `, ${suggestion.state_name}` : ''}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <button
                   type="submit"
                   className="rounded-2xl bg-amber-500 px-5 py-3 text-sm font-semibold text-gray-950 transition hover:bg-amber-400"
@@ -388,10 +520,6 @@ const TheatresPage = () => {
                           <span className="text-gray-500 dark:text-gray-400">Pincode</span>
                           <span>{theatre.pincode || 'N/A'}</span>
                         </div>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="text-gray-500 dark:text-gray-400">Source</span>
-                          <span className="capitalize">{theatre.source || 'Unknown'}</span>
-                        </div>
                         {lastSeen && (
                           <div className="flex items-center justify-between gap-4">
                             <span className="text-gray-500 dark:text-gray-400">Last seen</span>
@@ -401,6 +529,12 @@ const TheatresPage = () => {
                       </div>
 
                       <div className="mt-6 flex flex-wrap gap-3">
+                        <Link
+                          to={`/theatres/${theatre.theatre_id}`}
+                          className="rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-gray-950 transition hover:bg-amber-400"
+                        >
+                          Show Time
+                        </Link>
                         {mapUrl && (
                           <a
                             href={mapUrl}
