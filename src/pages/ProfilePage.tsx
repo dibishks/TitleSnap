@@ -1,10 +1,18 @@
 import ProfileCard from '../components/auth/ProfileCard';
+import { useSeo } from '../hooks/useSeo';
 
 /**
  * Profile Page
  * Displays the user's profile information
  */
 const ProfilePage = () => {
+  useSeo({
+    title: 'My Profile | TitleSnap',
+    description: 'Profile page for your TitleSnap account.',
+    canonicalPath: '/profile',
+    robots: 'noindex, nofollow',
+  });
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -24,4 +32,3 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
-

@@ -171,8 +171,8 @@ const Home = () => {
       description: pageDescription,
       potentialAction: {
         '@type': 'SearchAction',
-        target: `${window.location.origin}/movies`,
-        'query-input': 'required name=movie title snap',
+        target: `${window.location.origin}/theatres?search={search_term_string}`,
+        'query-input': 'required name=search_term_string',
       },
     },
   });

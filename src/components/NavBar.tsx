@@ -11,6 +11,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useLocation } from '../hooks/LocationContext';
 import { apiClient, ApiError } from '../services/api';
 import type { CitiesResponse, CityLocationItem } from '../types/location';
+import TheatreSearchBox from './TheatreSearchBox';
 
 /**
  * Navigation Menu Data
@@ -40,6 +41,7 @@ const baseMenuItems: MenuItem[] = [
  */
 const NavBar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
   const [popularCities, setPopularCities] = useState<CityLocationItem[]>([]);
   const { isAuthenticated } = useAuth();
   const { setSelectedLocation } = useLocation();
@@ -80,6 +82,15 @@ const NavBar = () => {
     setIsMobileMenuOpen(false);
   };
 
+  const handleGlobalSearchSubmit = (query: string) => {
+    navigate(query ? `/theatres?search=${encodeURIComponent(query)}` : '/theatres');
+  };
+
+  const handleMobileSearchSubmit = (query: string) => {
+    closeMobileMenu();
+    handleGlobalSearchSubmit(query);
+  };
+
   const moviesSubItems =
     popularCities.length > 0
       ? popularCities.map((city) => ({
@@ -116,21 +127,32 @@ const NavBar = () => {
   return (
     <nav className="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Left: Logo */}
-          <div className="flex-shrink-0">
+        <div className="hidden md:grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-6 py-4">
+          <div className="flex-shrink-0 pt-1">
             <Logo />
           </div>
 
-          {/* Center: Desktop Menu */}
-          <div className="hidden md:flex items-center space-x-1 flex-1 justify-center">
-            {menuItems.map((item, index) => (
-              <NavItem key={index} item={item} />
-            ))}
+          <div className="min-w-0">
+            <div className="flex items-center justify-center space-x-1">
+              {menuItems.map((item, index) => (
+                <NavItem key={index} item={item} />
+              ))}
+            </div>
+            <div className="mt-3">
+              <TheatreSearchBox
+                value={searchInput}
+                onChange={setSearchInput}
+                inputId="header-theatre-search"
+                placeholder="Search theatres by name, for example PVR"
+                className="w-full"
+                inputClassName="bg-stone-50 dark:bg-gray-950"
+                showSubmitButton={false}
+                onSubmitSearch={handleGlobalSearchSubmit}
+              />
+            </div>
           </div>
 
-          {/* Right: Location + Auth (Desktop) */}
-          <div className="hidden md:flex items-center">
+          <div className="flex items-center pt-1">
             <LocationPicker />
             {isAuthenticated ? (
               <UserMenu />
@@ -138,9 +160,14 @@ const NavBar = () => {
               <Auth0LoginButton />
             )}
           </div>
+        </div>
 
-          {/* Mobile: Hamburger Menu */}
-          <div className="md:hidden">
+        <div className="flex items-center justify-between py-4 md:hidden">
+          <div className="flex-shrink-0">
+            <Logo />
+          </div>
+
+          <div>
             <HamburgerMenu isOpen={isMobileMenuOpen} onClick={toggleMobileMenu} />
           </div>
         </div>
@@ -156,6 +183,23 @@ const NavBar = () => {
         }`}
       >
         <div className="py-2">
+          <div className="px-4 pb-2 pt-3">
+            <TheatreSearchBox
+              value={searchInput}
+              onChange={setSearchInput}
+              inputId="mobile-header-theatre-search"
+              placeholder="Search theatres by name, for example PVR"
+              className="w-full"
+              showSubmitButton={false}
+              onSubmitSearch={handleMobileSearchSubmit}
+              onSuggestionSelect={(theatre) => {
+                setSearchInput(theatre.name);
+                closeMobileMenu();
+                navigate(`/theatres/${theatre.theatre_id}`);
+              }}
+            />
+          </div>
+
           {/* Mobile Menu Items */}
           {menuItems.map((item, index) => (
             <NavItem key={index} item={item} isMobile onItemClick={closeMobileMenu} />

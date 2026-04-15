@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { useSeo } from '../hooks/useSeo';
 import { useTheatreShowtimes } from '../hooks/useTheatreShowtimes';
+import type { TheatreShowtimeItem } from '../types/theatre';
 
 const formatShowDate = (value?: string | null) => {
   if (!value) {
@@ -67,6 +68,93 @@ const getShowtimeTone = (statusColor?: string) => {
   }
 };
 
+const buildTheatreStructuredData = (
+  theatre: TheatreShowtimeItem,
+  showDate?: string | null
+) => {
+  const canonicalUrl = window.location.href;
+
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: window.location.origin,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Theatres',
+          item: `${window.location.origin}/theatres`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: theatre.name,
+          item: canonicalUrl,
+        },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'MovieTheater',
+      name: theatre.name,
+      image: theatre.cinema_logo_url || undefined,
+      url: canonicalUrl,
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: theatre.address,
+        addressLocality: theatre.city_name,
+        addressRegion: theatre.state_name || undefined,
+        postalCode: theatre.pincode || undefined,
+        addressCountry: 'IN',
+      },
+      geo:
+        typeof theatre.latitude === 'number' && typeof theatre.longitude === 'number'
+          ? {
+              '@type': 'GeoCoordinates',
+              latitude: theatre.latitude,
+              longitude: theatre.longitude,
+            }
+          : undefined,
+      amenityFeature: (theatre.amenity_names || []).map((amenity) => ({
+        '@type': 'LocationFeatureSpecification',
+        name: amenity,
+        value: true,
+      })),
+      containsPlace: (theatre.movies || []).map((movieGroup) => ({
+        '@type': 'ScreeningEvent',
+        name: `${movieGroup.movie.name} at ${theatre.name}`,
+        startDate: movieGroup.shows[0]?.show_time || undefined,
+        workPresented: {
+          '@type': 'Movie',
+          name: movieGroup.movie.name,
+          genre: movieGroup.movie.genres,
+          image: movieGroup.movie.image || undefined,
+          description: movieGroup.movie.description || undefined,
+          contentRating: movieGroup.movie.censor || undefined,
+        },
+        eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+        location: {
+          '@type': 'MovieTheater',
+          name: theatre.name,
+          address: theatre.address,
+        },
+      })),
+      subjectOf: showDate
+        ? {
+            '@type': 'CreativeWork',
+            name: `${theatre.name} showtimes for ${formatShowDate(showDate)}`,
+          }
+        : undefined,
+    },
+  ];
+};
+
 const TheatreDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const { theatre, showDate, loading, error, refetch } = useTheatreShowtimes(id || '');
@@ -91,15 +179,7 @@ const TheatreDetailsPage = () => {
       : 'theatre showtimes, cinema timings',
     canonicalPath: `${window.location.pathname}${window.location.search}`,
     image: theatre?.cinema_logo_url || '/img/titlesnap-banner-moto.png',
-    structuredData: theatre
-      ? {
-          '@context': 'https://schema.org',
-          '@type': 'MovieTheater',
-          name: theatre.name,
-          address: theatre.address,
-          url: window.location.href,
-        }
-      : undefined,
+    structuredData: theatre ? buildTheatreStructuredData(theatre, showDate) : undefined,
   });
 
   if (loading) {

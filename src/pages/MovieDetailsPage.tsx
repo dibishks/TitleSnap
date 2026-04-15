@@ -6,7 +6,7 @@ import { useSeo } from '../hooks/useSeo';
 import { apiClient } from '../services/api';
 import ImageModal from '../components/ImageModal';
 import TitleSnapCard from '../components/TitleSnapCard';
-import type { MovieSnapsPagination, MovieSnapsResponse, TitleSnap } from '../types/movie';
+import type { MovieDetail, MovieSnapsPagination, MovieSnapsResponse, TitleSnap } from '../types/movie';
 
 /**
  * Error State Component
@@ -97,6 +97,67 @@ const toAbsoluteImageUrl = (value: string) => {
   } catch {
     return value;
   }
+};
+
+const buildMovieStructuredData = (movie: MovieDetail) => {
+  const canonicalUrl = window.location.href;
+  const trailerUrl = movie.videoData?.url ? getTrailerUrl(movie.videoData.url) : undefined;
+
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: window.location.origin,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Movies',
+          item: `${window.location.origin}/movies`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: movie.name,
+          item: canonicalUrl,
+        },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Movie',
+      name: movie.name,
+      image: toAbsoluteImageUrl(movie.image),
+      description:
+        movie.description ||
+        movie.reasonToWatch ||
+        `Download ${movie.name} title snap images and browse community title screenshots.`,
+      genre: movie.genres,
+      datePublished: formatReleaseDateForSchema(movie.releaseDate),
+      contentRating: movie.censor || undefined,
+      url: canonicalUrl,
+      trailer: trailerUrl
+        ? {
+            '@type': 'VideoObject',
+            name: `${movie.name} trailer`,
+            url: trailerUrl,
+            thumbnailUrl: movie.videoData?.thumbnail
+              ? toAbsoluteImageUrl(movie.videoData.thumbnail)
+              : undefined,
+          }
+        : undefined,
+      additionalProperty: movie.movieVariants.map((variant) => ({
+        '@type': 'PropertyValue',
+        name: 'Available variant',
+        value: [variant.language, variant.format].filter(Boolean).join(' | '),
+      })),
+    },
+  ];
 };
 
 const getUploadDebugContext = (file: File | null, requestUrl: string, hasToken: boolean) => ({
@@ -191,20 +252,7 @@ const MovieDetailsPage = () => {
     image: movie?.image || '/img/titlesnap-banner-moto.png',
     type: 'article',
     canonicalPath: `${window.location.pathname}${window.location.search}`,
-    structuredData: movie
-      ? {
-          '@context': 'https://schema.org',
-          '@type': 'Movie',
-          name: movie.name,
-          image: toAbsoluteImageUrl(movie.image),
-          description:
-            movie.description ||
-            `Download ${movie.name} title snap images and browse community title screenshots.`,
-          genre: movie.genres,
-          datePublished: formatReleaseDateForSchema(movie.releaseDate),
-          url: window.location.href,
-        }
-      : undefined,
+    structuredData: movie ? buildMovieStructuredData(movie) : undefined,
   });
 
   const fetchSnaps = async (page: number, append = false) => {
