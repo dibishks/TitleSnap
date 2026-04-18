@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useLocation } from '../hooks/LocationContext';
 import { useMovieDetails } from '../hooks/useMovieDetails';
+import { useMovieShowtimes } from '../hooks/useMovieShowtimes';
 import { useSeo } from '../hooks/useSeo';
 import { apiClient } from '../services/api';
 import ImageModal from '../components/ImageModal';
+import MovieShowtimesSection from '../components/MovieShowtimesSection';
 import TitleSnapCard from '../components/TitleSnapCard';
 import type { MovieDetail, MovieSnapsPagination, MovieSnapsResponse, TitleSnap } from '../types/movie';
 
@@ -218,7 +221,15 @@ const mapSnap = (snap: NonNullable<MovieSnapsResponse['data']>['snaps'][number])
 const MovieDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const { isAuthenticated, loginRedirect, getAccessToken, logout } = useAuth();
+  const { selectedLocation } = useLocation();
   const { data: movie, loading, error, refetch } = useMovieDetails(id || '');
+  const {
+    theatres: showtimeTheatres,
+    showDate,
+    loading: showtimesLoading,
+    error: showtimesError,
+    refetch: refetchShowtimes,
+  } = useMovieShowtimes(movie?.movieId || '', selectedLocation?.city_id);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -580,80 +591,91 @@ const MovieDetailsPage = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <section className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              Community Title Snaps
-            </h2>
-            {snapsLoading && snaps.length === 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="rounded-xl bg-gray-100 dark:bg-gray-900/50 overflow-hidden animate-pulse"
-                  >
-                    <div className="aspect-video bg-gray-300 dark:bg-gray-700" />
-                    <div className="p-4 space-y-3">
-                      <div className="h-4 w-1/2 rounded bg-gray-300 dark:bg-gray-700" />
-                      <div className="h-3 w-1/3 rounded bg-gray-300 dark:bg-gray-700" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {snapsError && snaps.length === 0 && (
-              <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-900/40 dark:bg-red-900/20">
-                <p className="text-sm text-red-700 dark:text-red-300">{snapsError}</p>
-                <button
-                  type="button"
-                  onClick={() => void fetchSnaps(1)}
-                  className="mt-4 inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            {!snapsLoading && !snapsError && snaps.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 p-10 text-center">
-                <p className="text-lg font-medium text-gray-900 dark:text-white">
-                  No community title snaps yet
-                </p>
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Be the first user to upload one for this movie.
-                </p>
-              </div>
-            )}
-
-            {snaps.length > 0 && (
-              <>
+          <div className="space-y-6 lg:col-span-2">
+            <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                Community Title Snaps
+              </h2>
+              {snapsLoading && snaps.length === 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {snaps.map((snap) => (
-                    <TitleSnapCard
-                      key={snap.id}
-                      titleSnap={snap}
-                      movieName={movie.name}
-                      onClick={() => handleSnapClick(snap)}
-                      onShare={() => void handleSnapShare(snap)}
-                    />
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="rounded-xl bg-gray-100 dark:bg-gray-900/50 overflow-hidden animate-pulse"
+                    >
+                      <div className="aspect-video bg-gray-300 dark:bg-gray-700" />
+                      <div className="p-4 space-y-3">
+                        <div className="h-4 w-1/2 rounded bg-gray-300 dark:bg-gray-700" />
+                        <div className="h-3 w-1/3 rounded bg-gray-300 dark:bg-gray-700" />
+                      </div>
+                    </div>
                   ))}
                 </div>
+              )}
 
-                {snapsPagination?.has_more && (
-                  <div className="mt-8 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => void fetchSnaps((snapsPagination.page || 1) + 1, true)}
-                      disabled={snapsLoading}
-                      className="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-600 px-5 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {snapsLoading ? 'Loading...' : 'Load More'}
-                    </button>
+              {snapsError && snaps.length === 0 && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-900/40 dark:bg-red-900/20">
+                  <p className="text-sm text-red-700 dark:text-red-300">{snapsError}</p>
+                  <button
+                    type="button"
+                    onClick={() => void fetchSnaps(1)}
+                    className="mt-4 inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {!snapsLoading && !snapsError && snaps.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 p-10 text-center">
+                  <p className="text-lg font-medium text-gray-900 dark:text-white">
+                    No community title snaps yet
+                  </p>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    Be the first user to upload one for this movie.
+                  </p>
+                </div>
+              )}
+
+              {snaps.length > 0 && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {snaps.map((snap) => (
+                      <TitleSnapCard
+                        key={snap.id}
+                        titleSnap={snap}
+                        movieName={movie.name}
+                        onClick={() => handleSnapClick(snap)}
+                        onShare={() => void handleSnapShare(snap)}
+                      />
+                    ))}
                   </div>
-                )}
-              </>
-            )}
-          </section>
+
+                  {snapsPagination?.has_more && (
+                    <div className="mt-8 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => void fetchSnaps((snapsPagination.page || 1) + 1, true)}
+                        disabled={snapsLoading}
+                        className="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-600 px-5 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {snapsLoading ? 'Loading...' : 'Load More'}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+
+            <MovieShowtimesSection
+              theatres={showtimeTheatres}
+              showDate={showDate}
+              loading={showtimesLoading}
+              error={showtimesError}
+              cityName={selectedLocation?.city_name}
+              onRetry={refetchShowtimes}
+            />
+          </div>
 
           <div className="space-y-6">
             <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">

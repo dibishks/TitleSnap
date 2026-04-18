@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useSeo } from '../hooks/useSeo';
 import { useTheatreShowtimes } from '../hooks/useTheatreShowtimes';
 import type { TheatreShowtimeItem } from '../types/theatre';
+import { parseApiUtcDateTime } from '../utils/dateTime';
 
 const formatShowDate = (value?: string | null) => {
   if (!value) {
@@ -22,13 +23,13 @@ const formatShowDate = (value?: string | null) => {
 };
 
 const formatTime = (value: string) => {
-  const parsed = new Date(value);
+  const parsed = parseApiUtcDateTime(value);
 
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
 
-  return parsed.toLocaleTimeString('en-IN', {
+  return parsed.toLocaleTimeString(undefined, {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,

@@ -36,7 +36,8 @@ export const useMovieDetails = (id: string | number): UseMovieDetailsReturn => {
           `/titlesnap/movies/${id}`
         );
         setData({
-          id: response.movie_id || response._id,
+          id: response._id || response.movie_id,
+          movieId: response.movie_id || response._id,
           image: response.image,
           name: response.name,
           description: response.description || '',

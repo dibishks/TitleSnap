@@ -143,6 +143,7 @@ export interface PublicSnapsResponse {
 
 export interface MovieDetail {
   id: string;
+  movieId: string;
   image: string;
   name: string;
   description: string;
