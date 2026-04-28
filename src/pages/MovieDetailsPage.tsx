@@ -355,7 +355,7 @@ const MovieDetailsPage = () => {
 
       const baseUrl =
         import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
-      const requestUrl = `${baseUrl}/titlesnap/movies/${movie.id}/snaps`;
+      const requestUrl = `${baseUrl}/titlesnap/movies/${movie.movieId}/snaps`;
 
       console.groupCollapsed('[TitleSnap Upload] Starting upload');
       console.log(
@@ -415,7 +415,7 @@ const MovieDetailsPage = () => {
         '[TitleSnap Upload] Failure context:',
         getUploadDebugContext(
           selectedFile,
-          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1'}/titlesnap/movies/${movie.id}/snaps`,
+          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1'}/titlesnap/movies/${movie.movieId}/snaps`,
           Boolean(appToken)
         )
       );
