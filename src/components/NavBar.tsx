@@ -11,7 +11,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useLocation } from '../hooks/LocationContext';
 import { apiClient, ApiError } from '../services/api';
 import type { CitiesResponse, CityLocationItem } from '../types/location';
-import TheatreSearchBox from './TheatreSearchBox';
+import GlobalSearchBox from './GlobalSearchBox';
 
 /**
  * Navigation Menu Data
@@ -23,15 +23,11 @@ const baseMenuItems: MenuItem[] = [
     url: '/',
   },
   {
-    label: 'Contests',
-    url: '/contests',
+    label: 'Title Snap',
     subItems: [
-      { label: 'Title Snap Giveaway', url: '/contests/title-snap' },
+      { label: 'Title Snap', url: '/titlesnaps' },
+      { label: 'Contests', url: '/contests/title-snap' },
     ],
-  },
-  {
-    label: 'Title Snaps',
-    url: '/titlesnaps',
   },
 ];
 
@@ -82,15 +78,6 @@ const NavBar = () => {
     setIsMobileMenuOpen(false);
   };
 
-  const handleGlobalSearchSubmit = (query: string) => {
-    navigate(query ? `/theatres?search=${encodeURIComponent(query)}` : '/theatres');
-  };
-
-  const handleMobileSearchSubmit = (query: string) => {
-    closeMobileMenu();
-    handleGlobalSearchSubmit(query);
-  };
-
   const moviesSubItems =
     popularCities.length > 0
       ? popularCities.map((city) => ({
@@ -121,6 +108,10 @@ const NavBar = () => {
       label: 'Theatres',
       subItems: theatresSubItems,
     },
+    {
+      label: 'OTT Streaming',
+      url: '/ott-movies',
+    },
     ...baseMenuItems.slice(1),
   ];
 
@@ -139,15 +130,13 @@ const NavBar = () => {
               ))}
             </div>
             <div className="mt-3">
-              <TheatreSearchBox
+              <GlobalSearchBox
                 value={searchInput}
                 onChange={setSearchInput}
-                inputId="header-theatre-search"
-                placeholder="Search theatres by name, for example PVR"
+                inputId="header-global-search"
+                placeholder="Search theatres, movies, or OTT titles"
                 className="w-full"
                 inputClassName="bg-stone-50 dark:bg-gray-950"
-                showSubmitButton={false}
-                onSubmitSearch={handleGlobalSearchSubmit}
               />
             </div>
           </div>
@@ -184,19 +173,13 @@ const NavBar = () => {
       >
         <div className="py-2">
           <div className="px-4 pb-2 pt-3">
-            <TheatreSearchBox
+            <GlobalSearchBox
               value={searchInput}
               onChange={setSearchInput}
-              inputId="mobile-header-theatre-search"
-              placeholder="Search theatres by name, for example PVR"
+              inputId="mobile-header-global-search"
+              placeholder="Search theatres, movies, or OTT titles"
               className="w-full"
-              showSubmitButton={false}
-              onSubmitSearch={handleMobileSearchSubmit}
-              onSuggestionSelect={(theatre) => {
-                setSearchInput(theatre.name);
-                closeMobileMenu();
-                navigate(`/theatres/${theatre.theatre_id}`);
-              }}
+              onItemSelect={closeMobileMenu}
             />
           </div>
 

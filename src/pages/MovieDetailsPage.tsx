@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import { useLocation } from '../hooks/LocationContext';
 import { useMovieDetails } from '../hooks/useMovieDetails';
 import { useMovieShowtimes } from '../hooks/useMovieShowtimes';
@@ -9,6 +8,8 @@ import { apiClient } from '../services/api';
 import ImageModal from '../components/ImageModal';
 import MovieShowtimesSection from '../components/MovieShowtimesSection';
 import TitleSnapCard from '../components/TitleSnapCard';
+import TitleSnapUploadCard from '../components/TitleSnapUploadCard';
+import TitleSnapUploadFab from '../components/TitleSnapUploadFab';
 import type { MovieDetail, MovieSnapsPagination, MovieSnapsResponse, TitleSnap } from '../types/movie';
 
 /**
@@ -80,9 +81,6 @@ const formatReleaseDate = (timestamp: string) => {
 
 const getTrailerUrl = (videoId: string) =>
   videoId ? `https://www.youtube.com/watch?v=${videoId}` : '';
-
-const isAuthExpiredError = (status: number, message: string) =>
-  status === 401 || /invalid or expired token/i.test(message);
 
 const formatReleaseDateForSchema = (timestamp: string) => {
   const parsed = Number(timestamp);
@@ -163,41 +161,6 @@ const buildMovieStructuredData = (movie: MovieDetail) => {
   ];
 };
 
-const getUploadDebugContext = (file: File | null, requestUrl: string, hasToken: boolean) => ({
-  userAgent: navigator.userAgent,
-  pageUrl: window.location.href,
-  origin: window.location.origin,
-  online: navigator.onLine,
-  requestUrl,
-  hasToken,
-  file: file
-    ? {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        lastModified: file.lastModified,
-      }
-    : null,
-});
-
-interface SnapUploadResponse {
-  status: boolean;
-  data: {
-    message: string;
-    snap: {
-      id: string;
-      movie_id: string;
-      user_id: string;
-      image_url: string;
-      image_key: string;
-      thumbnail_url: string;
-      status: string;
-      created_at: string;
-      updated_at: string;
-    };
-  };
-}
-
 const SNAPS_PAGE_LIMIT = 20;
 
 const mapSnap = (snap: NonNullable<MovieSnapsResponse['data']>['snaps'][number]): TitleSnap => ({
@@ -220,7 +183,6 @@ const mapSnap = (snap: NonNullable<MovieSnapsResponse['data']>['snaps'][number])
  */
 const MovieDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { isAuthenticated, loginRedirect, getAccessToken, logout } = useAuth();
   const { selectedLocation } = useLocation();
   const { data: movie, loading, error, refetch } = useMovieDetails(id || '');
   const {
@@ -230,17 +192,11 @@ const MovieDetailsPage = () => {
     error: showtimesError,
     refetch: refetchShowtimes,
   } = useMovieShowtimes(movie?.movieId || '', selectedLocation?.city_id);
-  const [showUploadForm, setShowUploadForm] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const [snaps, setSnaps] = useState<TitleSnap[]>([]);
   const [snapsLoading, setSnapsLoading] = useState(false);
   const [snapsError, setSnapsError] = useState<string | null>(null);
   const [selectedSnap, setSelectedSnap] = useState<TitleSnap | null>(null);
   const [snapsPagination, setSnapsPagination] = useState<MovieSnapsPagination | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useSeo({
     title: movie
@@ -303,132 +259,6 @@ const MovieDetailsPage = () => {
 
     void fetchSnaps(1);
   }, [id]);
-
-  const handleUploadClick = async () => {
-    if (!isAuthenticated) {
-      await loginRedirect();
-      return;
-    }
-
-    setUploadMessage(null);
-    setUploadError(null);
-    setShowUploadForm(true);
-  };
-
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] || null;
-    setSelectedFile(file);
-    setUploadMessage(null);
-    setUploadError(null);
-  };
-
-  const handleUploadSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!movie) {
-      setUploadError('Movie details are not available yet. Please try again.');
-      return;
-    }
-
-    if (!selectedFile) {
-      setUploadError('Please select an image to upload.');
-      return;
-    }
-
-    const appToken = await getAccessToken();
-
-    if (!appToken) {
-      logout();
-      setShowUploadForm(false);
-      setUploadError('Session expired. Please sign in again.');
-      await loginRedirect();
-      return;
-    }
-
-    setUploading(true);
-    setUploadMessage(null);
-    setUploadError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append('image', selectedFile);
-
-      const baseUrl =
-        import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
-      const requestUrl = `${baseUrl}/titlesnap/movies/${movie.movieId}/snaps`;
-
-      console.groupCollapsed('[TitleSnap Upload] Starting upload');
-      console.log(
-        '[TitleSnap Upload] Request context:',
-        getUploadDebugContext(selectedFile, requestUrl, Boolean(appToken))
-      );
-
-      const response = await fetch(
-        requestUrl,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${appToken}`,
-          },
-          body: formData,
-        }
-      );
-      const responseText = await response.text();
-      let result: SnapUploadResponse | null = null;
-
-      try {
-        result = responseText ? (JSON.parse(responseText) as SnapUploadResponse) : null;
-      } catch (parseError) {
-        console.error('[TitleSnap Upload] Failed to parse upload response JSON:', parseError);
-      }
-
-      console.log('[TitleSnap Upload] Response status:', response.status, response.statusText);
-      console.log('[TitleSnap Upload] Response body:', responseText);
-
-      if (!response.ok || !result?.status) {
-        const errorMessage = result?.data?.message || 'Failed to upload title snap.';
-
-        if (isAuthExpiredError(response.status, errorMessage)) {
-          logout();
-          setShowUploadForm(false);
-          setSelectedFile(null);
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-          setUploadError('Session expired. Please sign in again.');
-          await loginRedirect();
-          return;
-        }
-
-        throw new Error(errorMessage);
-      }
-
-      setUploadMessage(result.data.message || 'Image uploaded successfully!');
-      setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      await fetchSnaps(1);
-    } catch (err) {
-      console.error('[TitleSnap Upload] Upload failed before completion:', err);
-      console.log(
-        '[TitleSnap Upload] Failure context:',
-        getUploadDebugContext(
-          selectedFile,
-          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1'}/titlesnap/movies/${movie.movieId}/snaps`,
-          Boolean(appToken)
-        )
-      );
-      setUploadError(
-        err instanceof Error
-          ? `${err.message}. Check the browser console for upload diagnostics.`
-          : 'Failed to upload title snap. Check the browser console for upload diagnostics.'
-      );
-    } finally {
-      console.groupEnd();
-      setUploading(false);
-    }
-  };
 
   const handleSnapClick = (snap: TitleSnap) => {
     setSelectedSnap(snap);
@@ -590,6 +420,13 @@ const MovieDetailsPage = () => {
       </section>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <TitleSnapUploadCard
+          movie={movie}
+          onUploadSuccess={() => void fetchSnaps(1)}
+          className="lg:hidden mb-6"
+          cardId="title-snap-upload-mobile"
+        />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="space-y-6 lg:col-span-2">
             <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
@@ -678,91 +515,11 @@ const MovieDetailsPage = () => {
           </div>
 
           <div className="space-y-6">
-            <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                Title Snap Upload
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Upload a single title snap for {movie.name}. If you are not signed in,
-                clicking the upload button will take you to login first.
-              </p>
-
-              <div className="mt-4">
-                {!showUploadForm && (
-                  <button
-                    type="button"
-                    onClick={() => void handleUploadClick()}
-                    className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    Title Snap Upload
-                  </button>
-                )}
-
-                {showUploadForm && (
-                  <form onSubmit={(event) => void handleUploadSubmit(event)} className="space-y-4">
-                    <div>
-                      <label
-                        htmlFor="title-snap-image"
-                        className="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
-                      >
-                        Select image
-                      </label>
-                      <input
-                        ref={fileInputRef}
-                        id="title-snap-image"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-3 text-sm text-gray-900 dark:text-white file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
-                      />
-                    </div>
-
-                    {selectedFile && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {selectedFile.name}
-                      </p>
-                    )}
-
-                    {uploadMessage && (
-                      <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                        {uploadMessage}
-                      </div>
-                    )}
-
-                    {uploadError && (
-                      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                        {uploadError}
-                      </div>
-                    )}
-
-                    <div className="flex flex-col gap-3">
-                      <button
-                        type="submit"
-                        disabled={uploading}
-                        className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {uploading ? 'Uploading...' : 'Upload Image'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowUploadForm(false);
-                          setSelectedFile(null);
-                          setUploadError(null);
-                          setUploadMessage(null);
-                          if (fileInputRef.current) {
-                            fileInputRef.current.value = '';
-                          }
-                        }}
-                        className="inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 px-5 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            </section>
+            <TitleSnapUploadCard
+              movie={movie}
+              onUploadSuccess={() => void fetchSnaps(1)}
+              className="hidden lg:block"
+            />
 
             <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
@@ -842,6 +599,8 @@ const MovieDetailsPage = () => {
           })}
         />
       )}
+
+      <TitleSnapUploadFab targetId="title-snap-upload-mobile" />
     </div>
   );
 };

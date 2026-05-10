@@ -6,6 +6,8 @@ import NavBar from './components/NavBar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
 import MoviesPage from './pages/MoviesPage';
+import OttMoviesPage from './pages/OttMoviesPage';
+import OttMovieDetailsPage from './pages/OttMovieDetailsPage';
 import About from './pages/About';
 import ContactUs from './pages/ContactUs';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -80,6 +82,8 @@ function App() {
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
                 <Route path="/movies" element={<MoviesPage />} />
+                <Route path="/ott-movies" element={<OttMoviesPage />} />
+                <Route path="/ott-movies/:slug" element={<OttMovieDetailsPage />} />
                 <Route path="/titlesnaps" element={<TitleSnapsPage />} />
                 <Route path="/movies/:id" element={<MovieDetailsPage />} />
                 <Route path="/theatres" element={<TheatresPage />} />
