@@ -37,6 +37,9 @@ const MyUploadsPage = () => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useSeo({
     title: 'My Uploads | TitleSnap',
@@ -107,6 +110,46 @@ const MyUploadsPage = () => {
   useEffect(() => {
     void fetchUploads(1);
   }, [fetchUploads]);
+
+  const handleDelete = useCallback(
+    async (snapId: string) => {
+      setDeletingId(snapId);
+      setDeleteError(null);
+
+      try {
+        const token = await getAccessToken();
+
+        if (!token) {
+          logout();
+          await loginRedirect();
+          return;
+        }
+
+        await apiClient.delete(`titlesnap/me/snaps/${snapId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        setSnaps((current) => current.filter((snap) => snap.id !== snapId));
+        setTotal((current) => Math.max(0, current - 1));
+        setConfirmingId(null);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          logout();
+          await loginRedirect();
+          return;
+        }
+
+        setDeleteError(
+          err instanceof Error ? err.message : 'Failed to delete the title snap.'
+        );
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [getAccessToken, loginRedirect, logout]
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 dark:bg-gray-900">
@@ -268,15 +311,62 @@ const MyUploadsPage = () => {
                         >
                           View Movie
                         </Link>
-                        <a
-                          href={snap.image_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                        >
-                          Open Upload
-                        </a>
+                        <div className="flex items-center gap-4">
+                          <a
+                            href={snap.image_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            Open Upload
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeleteError(null);
+                              setConfirmingId(snap.id);
+                            }}
+                            disabled={deletingId === snap.id}
+                            className="text-sm font-semibold text-red-600 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400 dark:hover:text-red-300"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
+
+                      {confirmingId === snap.id && (
+                        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-900/30 dark:bg-red-900/20">
+                          <p className="text-sm text-red-700 dark:text-red-200">
+                            Delete this title snap? This action cannot be undone.
+                          </p>
+                          {deleteError && (
+                            <p className="mt-2 text-xs text-red-600 dark:text-red-300">
+                              {deleteError}
+                            </p>
+                          )}
+                          <div className="mt-3 flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setConfirmingId(null);
+                                setDeleteError(null);
+                              }}
+                              disabled={deletingId === snap.id}
+                              className="rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleDelete(snap.id)}
+                              disabled={deletingId === snap.id}
+                              className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {deletingId === snap.id ? 'Deleting...' : 'Confirm Delete'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </article>
                 ))}

@@ -56,3 +56,19 @@ export interface AllMoviesResponse {
     pagination: MoviesPagination;
   };
 }
+
+export interface PopularMoviesByStateItem {
+  movie_id: string;
+  name: string;
+  last_seen_at?: string;
+  state_name?: string;
+}
+
+export interface PopularMoviesByStateResponse {
+  status: boolean;
+  data?: {
+    state_name: string;
+    movies: PopularMoviesByStateItem[];
+    pagination: MoviesPagination;
+  };
+}

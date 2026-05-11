@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import type { MenuItem } from '../types/navigation';
 import Logo from './Logo';
 import NavItem from './NavItem';
@@ -10,8 +9,17 @@ import LocationPicker from './LocationPicker';
 import { useAuth } from '../hooks/useAuth';
 import { useLocation } from '../hooks/LocationContext';
 import { apiClient, ApiError } from '../services/api';
-import type { CitiesResponse, CityLocationItem } from '../types/location';
+import type {
+  PopularMoviesByStateItem,
+  PopularMoviesByStateResponse,
+} from '../types/film';
+import type { TheatreItem, TheatresResponse } from '../types/theatre';
 import GlobalSearchBox from './GlobalSearchBox';
+
+const DEFAULT_MOVIES_STATE_NAME = 'Kerala';
+const MOVIES_SUBMENU_LIMIT = 10;
+const DEFAULT_THEATRES_CITY_KEY = 'thiruvananthapuram';
+const THEATRES_SUBMENU_LIMIT = 10;
 
 /**
  * Navigation Menu Data
@@ -38,37 +46,101 @@ const baseMenuItems: MenuItem[] = [
 const NavBar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchInput, setSearchInput] = useState('');
-  const [popularCities, setPopularCities] = useState<CityLocationItem[]>([]);
+  const [popularMovies, setPopularMovies] = useState<PopularMoviesByStateItem[]>([]);
+  const [popularTheatres, setPopularTheatres] = useState<TheatreItem[]>([]);
   const { isAuthenticated } = useAuth();
-  const { setSelectedLocation } = useLocation();
-  const navigate = useNavigate();
+  const { selectedLocation } = useLocation();
+
+  const moviesStateName = selectedLocation?.state_name?.trim() || DEFAULT_MOVIES_STATE_NAME;
+  const theatresCityKey =
+    selectedLocation?.city_key?.trim() ||
+    selectedLocation?.cleaned_city_name?.trim() ||
+    DEFAULT_THEATRES_CITY_KEY;
 
   useEffect(() => {
-    const fetchPopularCities = async () => {
+    let cancelled = false;
+
+    const fetchPopularTheatres = async () => {
       try {
-        const response = await apiClient.get<CitiesResponse>('titlesnap/states', {
-          params: { is_popular_city: true },
+        const response = await apiClient.get<TheatresResponse>('titlesnap/theatres', {
+          params: {
+            city_key: theatresCityKey,
+            page: 1,
+            limit: THEATRES_SUBMENU_LIMIT,
+          },
         });
 
-        const uniqueCities = Array.from(
-          new Map(
-            (response.data || [])
-              .filter((item) => item.city_id && item.city_name)
-              .map((item) => [item.city_id, item])
-          ).values()
-        ).sort((left, right) => left.city_name.localeCompare(right.city_name));
-
-        setPopularCities(uniqueCities);
-      } catch (error) {
-        if (!(error instanceof ApiError)) {
-          console.error('Failed to fetch popular cities', error);
+        if (cancelled) {
+          return;
         }
-        setPopularCities([]);
+
+        const theatres = (response.data?.theatres || []).filter(
+          (theatre) => theatre.theatre_id && theatre.name
+        );
+
+        setPopularTheatres(theatres);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        if (!(error instanceof ApiError)) {
+          console.error('Failed to fetch popular theatres', error);
+        }
+        setPopularTheatres([]);
       }
     };
 
-    void fetchPopularCities();
-  }, []);
+    void fetchPopularTheatres();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [theatresCityKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPopularMovies = async () => {
+      try {
+        const response = await apiClient.get<PopularMoviesByStateResponse>(
+          'titlesnap/movies',
+          {
+            params: {
+              state_name: moviesStateName,
+              page: 1,
+              limit: MOVIES_SUBMENU_LIMIT,
+            },
+          }
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        const movies = (response.data?.movies || []).filter(
+          (movie) => movie.movie_id && movie.name
+        );
+
+        setPopularMovies(movies);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        if (!(error instanceof ApiError)) {
+          console.error('Failed to fetch popular movies', error);
+        }
+        setPopularMovies([]);
+      }
+    };
+
+    void fetchPopularMovies();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [moviesStateName]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -79,22 +151,18 @@ const NavBar = () => {
   };
 
   const moviesSubItems =
-    popularCities.length > 0
-      ? popularCities.map((city) => ({
-          label: city.city_name,
-          url: '/',
-          onClick: () => {
-            setSelectedLocation(city);
-            navigate('/');
-          },
+    popularMovies.length > 0
+      ? popularMovies.map((movie) => ({
+          label: movie.name,
+          url: `/movies/${movie.movie_id}`,
         }))
       : [];
 
   const theatresSubItems =
-    popularCities.length > 0
-      ? popularCities.map((city) => ({
-          label: city.city_name,
-          url: `/theatres?location=${encodeURIComponent(city.city_key || city.cleaned_city_name || city.city_name)}`,
+    popularTheatres.length > 0
+      ? popularTheatres.map((theatre) => ({
+          label: theatre.name,
+          url: `/theatres/${theatre.theatre_id}`,
         }))
       : [];
 
