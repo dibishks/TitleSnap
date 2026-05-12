@@ -5,6 +5,20 @@ interface MovieCardProps {
   film: Film;
 }
 
+const formatReleaseDate = (timestamp?: string) => {
+  const parsed = Number(timestamp);
+
+  if (!parsed) {
+    return null;
+  }
+
+  return new Date(parsed * 1000).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
 /**
  * MovieCard component - Displays a movie poster and title
  * @param {MovieCardProps} props - Component props containing film data
@@ -12,6 +26,7 @@ interface MovieCardProps {
 const MovieCard = ({ film }: MovieCardProps) => {
   // Extract movie ID from the film.url or use film.id
   const movieSlug = film.id;
+  const releaseDate = formatReleaseDate(film.release_date);
 
   return (
     <Link
@@ -43,6 +58,18 @@ const MovieCard = ({ film }: MovieCardProps) => {
         {film.variant && (
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {film.variant}
+          </p>
+        )}
+        {releaseDate && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path
+                fillRule="evenodd"
+                d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm10 7H4v7h12V9z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span>Released {releaseDate}</span>
           </p>
         )}
       </div>

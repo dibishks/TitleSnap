@@ -20,6 +20,7 @@ import TitleSnapsPage from './pages/TitleSnapsPage';
 import TheatresPage from './pages/TheatresPage';
 import TheatreDetailsPage from './pages/TheatreDetailsPage';
 import ProtectedRoute from './routes/ProtectedRoute';
+import BetaGate from './components/BetaGate';
 import { useSeo } from './hooks/useSeo';
 
 const Services: React.FC = () => {
@@ -70,6 +71,7 @@ function App() {
   return (
     <ThemeProvider>
       <LocationProvider>
+        <BetaGate>
         <Router>
           <div className="App min-h-screen flex flex-col">
             <NavBar />
@@ -121,6 +123,7 @@ function App() {
             <Footer />
           </div>
         </Router>
+        </BetaGate>
       </LocationProvider>
     </ThemeProvider>
   );

@@ -16,6 +16,7 @@ const mapMovieToFilm = (movie: MoviesApiItem): Film => ({
   variant: [movie.movie_variants?.[0]?.language, movie.movie_variants?.[0]?.format]
     .filter(Boolean)
     .join(' | '),
+  release_date: movie.release_date,
 });
 
 /**

@@ -12,7 +12,7 @@ interface SeoConfig {
 }
 
 const DEFAULT_SITE_NAME = 'TitleSnap';
-const DEFAULT_SOCIAL_IMAGE = '/img/titlesnap-banner-moto.png';
+const DEFAULT_SOCIAL_IMAGE = '/img/og-image.jpg';
 
 const ensureMetaTag = (selector: string, attribute: 'name' | 'property', value: string) => {
   let element = document.head.querySelector<HTMLMetaElement>(selector);

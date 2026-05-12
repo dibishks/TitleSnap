@@ -157,7 +157,7 @@ const HeaderSlider = ({ cityName, stateName }: HeaderSliderProps) => {
                         <img
                           src={
                             index === 0
-                              ? '/img/banner1-thumb.png'
+                              ? '/img/madhuvidhu-titlesnap.jpg'
                               : index === 1
                                 ? '/img/banner2-offer.png'
                                 : '/img/banner3-discover.png'

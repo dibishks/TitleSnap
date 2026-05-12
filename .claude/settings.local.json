@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm run *)",
       "PowerShell(npm run type-check 2>&1)",
-      "PowerShell(npm run lint 2>&1)"
+      "PowerShell(npm run lint 2>&1)",
+      "Bash(awk '{print $5, $9}')"
     ]
   }
 }

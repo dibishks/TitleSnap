@@ -3,6 +3,7 @@ export interface Film {
   image: string;
   name: string;
   variant?: string;
+  release_date?: string;
 }
 
 export interface MovieVariant {
@@ -17,6 +18,7 @@ export interface MoviesApiItem {
   name: string;
   display_order?: number;
   movie_variants?: MovieVariant[];
+  release_date?: string;
 }
 
 export interface MoviesApiData {

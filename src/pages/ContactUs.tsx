@@ -1,5 +1,19 @@
-import React from 'react';
+import React, { useState, type FormEvent } from 'react';
 import { useSeo } from '../hooks/useSeo';
+import { apiClient, ApiError } from '../services/api';
+
+interface ContactSubmitResponse {
+  status: boolean;
+  data?: {
+    _id: string;
+    name: string;
+    email: string;
+    message: string;
+    created_at: string;
+    updated_at: string;
+  };
+  message?: string;
+}
 
 const reasonsToReachOut = [
   'Report a problem or bug',
@@ -15,6 +29,55 @@ const inputClassName =
   'mt-2 w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-slate-900 focus:ring-4 focus:ring-slate-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white dark:focus:ring-slate-700/40';
 
 const ContactUs: React.FC = () => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(
+    null,
+  );
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (submitting) return;
+
+    setSubmitting(true);
+    setFeedback(null);
+
+    try {
+      const response = await apiClient.post<ContactSubmitResponse>('titlesnap/contact', {
+        name: name.trim(),
+        email: email.trim(),
+        message: message.trim(),
+      });
+
+      if (response.status) {
+        setFeedback({
+          type: 'success',
+          text: 'Thanks for reaching out! We will get back to you within 24 to 48 hours.',
+        });
+        setName('');
+        setEmail('');
+        setMessage('');
+      } else {
+        setFeedback({
+          type: 'error',
+          text: response.message || 'Something went wrong. Please try again.',
+        });
+      }
+    } catch (err) {
+      const text =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Failed to send your message. Please try again later.';
+      setFeedback({ type: 'error', text });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   useSeo({
     title: 'Contact Us | TitleSnap',
     description:
@@ -112,7 +175,7 @@ const ContactUs: React.FC = () => {
               Fill out the form below and we will get back to you as soon as possible.
             </p>
 
-            <form className="mt-8 space-y-6" onSubmit={(event) => event.preventDefault()}>
+            <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
               <div>
                 <label
                   htmlFor="contact-name"
@@ -126,6 +189,10 @@ const ContactUs: React.FC = () => {
                   type="text"
                   autoComplete="name"
                   placeholder="Enter your name"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={submitting}
                   className={inputClassName}
                 />
               </div>
@@ -143,6 +210,10 @@ const ContactUs: React.FC = () => {
                   type="email"
                   autoComplete="email"
                   placeholder="Enter your email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={submitting}
                   className={inputClassName}
                 />
               </div>
@@ -159,15 +230,34 @@ const ContactUs: React.FC = () => {
                   name="message"
                   rows={7}
                   placeholder="Tell us how we can help"
+                  required
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  disabled={submitting}
                   className={`${inputClassName} resize-y`}
                 />
               </div>
 
+              {feedback && (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className={`rounded-2xl px-4 py-3 text-sm ${
+                    feedback.type === 'success'
+                      ? 'border border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-700/40 dark:bg-emerald-900/30 dark:text-emerald-200'
+                      : 'border border-red-200 bg-red-50 text-red-800 dark:border-red-700/40 dark:bg-red-900/30 dark:text-red-200'
+                  }`}
+                >
+                  {feedback.text}
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-300 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200 dark:focus:ring-slate-600"
+                disabled={submitting}
+                className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200 dark:focus:ring-slate-600"
               >
-                Send Message
+                {submitting ? 'Sending…' : 'Send Message'}
               </button>
             </form>
 
