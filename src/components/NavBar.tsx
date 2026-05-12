@@ -18,7 +18,7 @@ import GlobalSearchBox from './GlobalSearchBox';
 
 const DEFAULT_MOVIES_STATE_NAME = 'Kerala';
 const MOVIES_SUBMENU_LIMIT = 10;
-const DEFAULT_THEATRES_CITY_KEY = 'thiruvananthapuram';
+const DEFAULT_THEATRES_CITY_KEY = 'kochi';
 const THEATRES_SUBMENU_LIMIT = 10;
 
 /**

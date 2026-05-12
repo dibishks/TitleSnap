@@ -17,7 +17,7 @@ interface LocationContextValue {
   setSelectedLocation: (location: CityLocationItem) => void;
 }
 
-const DEFAULT_CITY_KEYS = ['trivandrum', 'thiruvananthapuram'];
+const DEFAULT_CITY_KEYS = ['kochi'];
 const STORAGE_KEY = 'titlesnap.selected_location';
 
 const LocationContext = createContext<LocationContextValue | undefined>(undefined);

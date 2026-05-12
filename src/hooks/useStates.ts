@@ -8,7 +8,7 @@ interface UseStatesReturn {
   error: string | null;
 }
 
-const DEFAULT_CITY_KEYS = ['trivandrum', 'thiruvananthapuram'];
+const DEFAULT_CITY_KEYS = ['kochi'];
 
 const normalizeCityValue = (value?: string) => value?.trim().toLowerCase() || '';
 
