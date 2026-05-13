@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { LocationProvider } from './hooks/LocationContext';
 import { ThemeProvider } from './hooks/ThemeContext';
+import { AdminAuthProvider } from './hooks/AdminAuthContext';
 import NavBar from './components/NavBar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -20,6 +21,14 @@ import TitleSnapsPage from './pages/TitleSnapsPage';
 import TheatresPage from './pages/TheatresPage';
 import TheatreDetailsPage from './pages/TheatreDetailsPage';
 import ProtectedRoute from './routes/ProtectedRoute';
+import AdminProtectedRoute from './routes/AdminProtectedRoute';
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminTitleSnaps from './pages/admin/AdminTitleSnaps';
+import AdminContactMessages from './pages/admin/AdminContactMessages';
+import AdminBetaUsers from './pages/admin/AdminBetaUsers';
 import BetaGate from './components/BetaGate';
 import { useSeo } from './hooks/useSeo';
 
@@ -67,64 +76,87 @@ const NotFound: React.FC = () => {
   );
 };
 
+const MainSite: React.FC = () => (
+  <LocationProvider>
+    <BetaGate>
+      <div className="App min-h-screen flex flex-col">
+        <NavBar />
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/contact" element={<ContactUs />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+            <Route path="/movies" element={<MoviesPage />} />
+            <Route path="/ott-movies" element={<OttMoviesPage />} />
+            <Route path="/ott-movies/:slug" element={<OttMovieDetailsPage />} />
+            <Route path="/titlesnaps" element={<TitleSnapsPage />} />
+            <Route path="/movies/:id" element={<MovieDetailsPage />} />
+            <Route path="/theatres" element={<TheatresPage />} />
+            <Route path="/theatres/:id" element={<TheatreDetailsPage />} />
+            <Route path="/contests" element={<ContestsPage />} />
+            <Route path="/contests/:slug" element={<ContestsPage />} />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-uploads"
+              element={
+                <ProtectedRoute>
+                  <MyUploadsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Services />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/login" element={<Home />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
+    </BetaGate>
+  </LocationProvider>
+);
+
 function App() {
   return (
     <ThemeProvider>
-      <LocationProvider>
-        <BetaGate>
+      <AdminAuthProvider>
         <Router>
-          <div className="App min-h-screen flex flex-col">
-            <NavBar />
-            <main className="flex-1">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/services" element={<Services />} />
-                <Route path="/contact" element={<ContactUs />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
-                <Route path="/movies" element={<MoviesPage />} />
-                <Route path="/ott-movies" element={<OttMoviesPage />} />
-                <Route path="/ott-movies/:slug" element={<OttMovieDetailsPage />} />
-                <Route path="/titlesnaps" element={<TitleSnapsPage />} />
-                <Route path="/movies/:id" element={<MovieDetailsPage />} />
-                <Route path="/theatres" element={<TheatresPage />} />
-                <Route path="/theatres/:id" element={<TheatreDetailsPage />} />
-                <Route path="/contests" element={<ContestsPage />} />
-                <Route path="/contests/:slug" element={<ContestsPage />} />
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <ProfilePage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/my-uploads"
-                  element={
-                    <ProtectedRoute>
-                      <MyUploadsPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/settings"
-                  element={
-                    <ProtectedRoute>
-                      <Services />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/login" element={<Home />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
+          <Routes>
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route
+              path="/admin"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout />
+                </AdminProtectedRoute>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="titlesnaps" element={<AdminTitleSnaps />} />
+              <Route path="contact-messages" element={<AdminContactMessages />} />
+              <Route path="beta-users" element={<AdminBetaUsers />} />
+            </Route>
+            <Route path="/*" element={<MainSite />} />
+          </Routes>
         </Router>
-        </BetaGate>
-      </LocationProvider>
+      </AdminAuthProvider>
     </ThemeProvider>
   );
 }

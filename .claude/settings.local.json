@@ -4,7 +4,9 @@
       "Bash(npm run *)",
       "PowerShell(npm run type-check 2>&1)",
       "PowerShell(npm run lint 2>&1)",
-      "Bash(awk '{print $5, $9}')"
+      "Bash(awk '{print $5, $9}')",
+      "Bash(node \"c:/playground/TitleSnap/node_modules/vite/bin/vite.js\" build \"c:/playground/TitleSnap\")",
+      "Bash(node \"c:/playground/TitleSnap/node_modules/typescript/bin/tsc\" -p \"c:/playground/TitleSnap/tsconfig.app.json\" --noEmit)"
     ]
   }
 }
