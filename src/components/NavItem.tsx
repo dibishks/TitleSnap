@@ -101,7 +101,7 @@ const NavItem = ({ item, isMobile = false, onItemClick }: NavItemProps) => {
         {/* Desktop Dropdown Menu */}
         {hasSubItems && isDropdownOpen && (
           <div className="absolute left-0 top-full z-50 w-56 pt-2 animate-fade-in">
-            <div className="rounded-lg border border-gray-200 bg-white py-2 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+            <div className="max-h-[70vh] overflow-y-auto rounded-lg border border-gray-200 bg-white py-2 shadow-xl dark:border-gray-700 dark:bg-gray-800">
               {item.subItems?.map((subItem, index) => (
                 <Link
                   key={index}

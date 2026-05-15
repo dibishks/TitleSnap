@@ -29,7 +29,8 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminTitleSnaps from './pages/admin/AdminTitleSnaps';
 import AdminContactMessages from './pages/admin/AdminContactMessages';
 import AdminBetaUsers from './pages/admin/AdminBetaUsers';
-import BetaGate from './components/BetaGate';
+// Beta gate disabled — site is now publicly open.
+// import BetaGate from './components/BetaGate';
 import { useSeo } from './hooks/useSeo';
 
 const Services: React.FC = () => {
@@ -78,7 +79,8 @@ const NotFound: React.FC = () => {
 
 const MainSite: React.FC = () => (
   <LocationProvider>
-    <BetaGate>
+    {/* Beta gate disabled — site is now publicly open. */}
+    {/* <BetaGate> */}
       <div className="App min-h-screen flex flex-col">
         <NavBar />
         <main className="flex-1">
@@ -128,7 +130,7 @@ const MainSite: React.FC = () => (
         </main>
         <Footer />
       </div>
-    </BetaGate>
+    {/* </BetaGate> */}
   </LocationProvider>
 );
 

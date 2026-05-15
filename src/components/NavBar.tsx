@@ -150,21 +150,32 @@ const NavBar = () => {
     setIsMobileMenuOpen(false);
   };
 
-  const moviesSubItems =
-    popularMovies.length > 0
-      ? popularMovies.map((movie) => ({
-          label: movie.name,
-          url: `/movies/${movie.movie_id}`,
-        }))
-      : [];
+  const moviesSubItems = [
+    ...popularMovies.map((movie) => ({
+      label: movie.name,
+      url: `/movies/${movie.movie_id}`,
+    })),
+    {
+      label: 'View all movies →',
+      url: '/movies',
+    },
+  ];
 
-  const theatresSubItems =
-    popularTheatres.length > 0
-      ? popularTheatres.map((theatre) => ({
-          label: theatre.name,
-          url: `/theatres/${theatre.theatre_id}`,
-        }))
-      : [];
+  const theatresCityDisplay =
+    selectedLocation?.cleaned_city_name?.trim() ||
+    selectedLocation?.city_name?.trim() ||
+    theatresCityKey.charAt(0).toUpperCase() + theatresCityKey.slice(1);
+
+  const theatresSubItems = [
+    ...popularTheatres.map((theatre) => ({
+      label: theatre.name,
+      url: `/theatres/${theatre.theatre_id}`,
+    })),
+    {
+      label: `View all theatres in ${theatresCityDisplay} →`,
+      url: `/theatres?location=${encodeURIComponent(theatresCityKey)}`,
+    },
+  ];
 
   const menuItems: MenuItem[] = [
     baseMenuItems[0],
